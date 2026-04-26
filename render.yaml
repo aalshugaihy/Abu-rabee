@@ -1,0 +1,108 @@
+# Abu-Rabee — Render blueprint.
+#
+# Provisions three resources together:
+#   1. abu-rabee-db      — managed PostgreSQL (free tier, 90-day expiry).
+#   2. abu-rabee-api     — Node.js web service (Express + Prisma + Socket.io).
+#   3. abu-rabee-client  — static site (Vite SPA), pre-built with VITE_API_URL
+#      pointed at the API service.
+#
+# To deploy:
+#   1. Push this repo to GitHub.
+#   2. On Render: New → Blueprint → connect this repo.
+#   3. Render reads this file and creates everything in one go.
+#   4. After first deploy, optionally run the seed:
+#         render shell --service abu-rabee-api → npm run seed
+#
+# Sign in with the seeded demo credentials and you're live.
+
+databases:
+  - name: abu-rabee-db
+    plan: free
+    databaseName: aburabee
+    user: aburabee
+    region: frankfurt   # change to your nearest region
+    postgresMajorVersion: 16
+
+services:
+  # ---- API + WebSocket ------------------------------------------------------
+  - type: web
+    name: abu-rabee-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: server
+    autoDeploy: true
+    buildCommand: |
+      npm ci --no-audit --no-fund
+      npm run prepare:production
+      npx prisma generate
+      npm run build
+    startCommand: |
+      npx prisma db push --skip-generate --accept-data-loss
+      node --enable-source-maps dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      # JWT signing secret — Render generates a long random value once.
+      - key: JWT_SECRET
+        generateValue: true
+      # PostgreSQL connection string from the linked database above.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: abu-rabee-db
+          property: connectionString
+      # Allowed origin for CORS + Socket.io. Defaults to the static-site URL
+      # below; change it if you serve the SPA from a custom domain.
+      - key: CLIENT_ORIGIN
+        value: https://abu-rabee-client.onrender.com
+      # Cross-site cookies (frontend + API on different *.onrender.com sub-
+      # domains) require SameSite=None + Secure; both honoured by this app.
+      - key: COOKIE_SAMESITE
+        value: none
+      # Email transport: noop is the safe default (no outbound SMTP attempts).
+      # Switch to 'smtp' and add SMTP_* vars to enable real notifications.
+      - key: NODEMAIL_TRANSPORT
+        value: noop
+
+  # ---- Static SPA ------------------------------------------------------------
+  - type: web
+    name: abu-rabee-client
+    runtime: static
+    region: frankfurt
+    plan: free
+    rootDir: .
+    autoDeploy: true
+    buildCommand: |
+      npm ci --no-audit --no-fund
+      npm run build
+    staticPublishPath: dist
+    envVars:
+      # Inlined into the bundle at build time so the SPA knows where the API
+      # lives. `sync: false` lets Render Service URLs auto-resolve once the
+      # API service is created — adjust if you bring a custom domain.
+      - key: VITE_API_URL
+        value: https://abu-rabee-api.onrender.com
+      - key: VITE_BASE
+        value: /
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      # SPA fallback — every unknown path returns index.html so React Router
+      # can resolve the route on the client.
+      - type: rewrite
+        source: /*
+        destination: /index.html

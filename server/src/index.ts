@@ -8,8 +8,14 @@ const ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 const app = createApp();
 const server = http.createServer(app);
+
+// Socket.io accepts the same comma-separated CORS spec as the REST API.
+const allowedOrigins = ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
 const io = new IOServer(server, {
-  cors: { origin: ORIGIN, credentials: true },
+  cors: {
+    origin: allowedOrigins.length === 1 && allowedOrigins[0] === '*' ? true : allowedOrigins,
+    credentials: true,
+  },
 });
 setIo(io);
 

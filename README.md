@@ -112,7 +112,52 @@ survives container restarts. Use `docker compose down -v` to wipe it.
 Both images include healthchecks (`/` for the SPA, `/health` for the API)
 and the server runs `prisma db push` automatically on first start.
 
-### Option D — Self-hosted SPA only (Docker + Nginx)
+### Option D — One-click deploy to Render
+
+The repo ships a top-level `render.yaml` blueprint that provisions all three
+moving parts in a single deploy:
+
+| Resource | Type | Plan | What it does |
+|---|---|---|---|
+| `abu-rabee-db`     | PostgreSQL 16 | Free (90-day) | Production datastore |
+| `abu-rabee-api`    | Node web service | Free | Express + Prisma + Socket.io |
+| `abu-rabee-client` | Static site | Free | Vite SPA, pre-built with `VITE_API_URL` |
+
+**Deploy steps (≈ 5 minutes):**
+
+1. **Push this repo to GitHub** (already done if you cloned from the PR).
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New** →
+   **Blueprint** → connect your GitHub repo and pick the `Abu-rabee` branch.
+3. Render reads `render.yaml`, creates the database, builds both services
+   and wires `DATABASE_URL` automatically. JWT_SECRET is auto-generated.
+4. **First-run seed (optional)** — open the API service in Render and run
+   `npm run seed` from the Shell tab to create the demo users:
+
+   | email | password | role |
+   |---|---|---|
+   | `admin@aburabee.gov`  | `admin1234`  | admin  |
+   | `staff@aburabee.gov`  | `staff1234`  | staff  |
+   | `viewer@aburabee.gov` | `viewer1234` | viewer |
+
+5. Visit the static site URL (default `https://abu-rabee-client.onrender.com`),
+   sign in, and you're live.
+
+**Region / domain:** edit `region:` in `render.yaml` (default `frankfurt`)
+to use the closest Render region. If you bring a custom domain, set
+`CLIENT_ORIGIN` (API service) and `VITE_API_URL` (static site) to the new
+URLs and redeploy — `VITE_API_URL` is build-time, so it must be set before
+the static site rebuilds.
+
+**Cold starts:** the free Web Service plan sleeps after ~15 min of
+inactivity. The first request after a sleep takes ~30 s to wake. Upgrade
+to **Starter** ($7/mo) for always-on.
+
+**Database lifetime:** the free PostgreSQL plan deletes the database after
+90 days. Upgrade to a paid plan ($7/mo) for persistence, or take regular
+backups via the Render dashboard or `server/scripts/backup.sh` (works
+against the connection string too — just point `DB_PATH` accordingly).
+
+### Option E — Self-hosted SPA only (Docker + Nginx)
 
 If you don't need the backend (localStorage mode), build just the frontend:
 

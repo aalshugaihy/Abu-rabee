@@ -18,11 +18,42 @@ import { prisma } from './db.js';
  * a port. Tests inject this directly into supertest; production wraps it in
  * `index.ts` which adds the http+socket.io server.
  */
+/**
+ * Build the CORS origin matcher. Accepts:
+ *   - empty / "*"   → mirror the request origin (good for local + Render)
+ *   - "a, b, c"     → exact list
+ *   - "https://*.example.com" → wildcard subdomain (single asterisk only)
+ */
+function buildCorsOrigin(spec: string | undefined): cors.CorsOptions['origin'] {
+  if (!spec || spec.trim() === '' || spec.trim() === '*') return true;
+  const entries = spec.split(',').map((s) => s.trim()).filter(Boolean);
+  const exact = new Set<string>();
+  const patterns: RegExp[] = [];
+  for (const entry of entries) {
+    if (entry.includes('*')) {
+      const escaped = entry.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*');
+      patterns.push(new RegExp(`^${escaped}$`));
+    } else {
+      exact.add(entry);
+    }
+  }
+  return (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (exact.has(origin)) return callback(null, true);
+    if (patterns.some((re) => re.test(origin))) return callback(null, true);
+    // Reject by withholding the Access-Control-Allow-Origin header — the
+    // browser then blocks the request itself. Returning an Error here would
+    // bubble to the 500 handler, which is uglier than a clean CORS denial.
+    return callback(null, false);
+  };
+}
+
 export function createApp(): express.Express {
   const app = express();
-  const ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+  const origin = buildCorsOrigin(process.env.CLIENT_ORIGIN || 'http://localhost:5173');
 
-  app.use(cors({ origin: ORIGIN, credentials: true }));
+  app.set('trust proxy', 1); // Render terminates TLS upstream
+  app.use(cors({ origin, credentials: true }));
   app.use(cookieParser());
   app.use(express.json({ limit: '1mb' }));
 

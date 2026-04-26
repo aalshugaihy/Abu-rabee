@@ -41,11 +41,23 @@ function signAccess(user: AuthUser): string {
   });
 }
 
+type SameSite = 'lax' | 'strict' | 'none';
+function cookieSameSite(): SameSite {
+  const v = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase();
+  if (v === 'none' || v === 'strict' || v === 'lax') return v;
+  return 'lax';
+}
+function cookieSecure(): boolean {
+  // SameSite=None requires Secure. Also default to Secure in production.
+  if (cookieSameSite() === 'none') return true;
+  return process.env.NODE_ENV === 'production';
+}
+
 function baseCookieOptions(maxAgeSeconds: number): CookieOptions {
   return {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: cookieSameSite(),
+    secure: cookieSecure(),
     maxAge: maxAgeSeconds * 1000,
     path: '/',
   };
