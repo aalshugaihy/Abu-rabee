@@ -1,26 +1,32 @@
 import { Link } from 'react-router-dom';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 import Logo from './Logo';
 import LanguageSwitch from './LanguageSwitch';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUI } from '../contexts/UIContext';
+import GlobalSearch from './GlobalSearch';
 
 export default function TopBar() {
   const { t } = useLanguage();
+  const { toggleMobileNav } = useUI();
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 glass">
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 py-3">
-        <Link to="/app" className="flex items-center gap-3">
-          <Logo />
-        </Link>
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-3 sm:px-6 lg:px-8 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleMobileNav}
+            className="lg:hidden rounded-xl p-2.5 text-slate-600 hover:bg-slate-100"
+            aria-label="Open navigation"
+          >
+            <Menu size={20} />
+          </button>
+          <Link to="/app" className="flex items-center gap-3">
+            <Logo />
+          </Link>
+        </div>
         <div className="hidden md:flex flex-1 max-w-xl">
-          <div className="relative w-full">
-            <Search size={16} className="absolute top-1/2 -translate-y-1/2 start-3 text-slate-400" />
-            <input
-              type="search"
-              placeholder={t('action.search')}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-10 py-2.5 text-sm focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 outline-none"
-            />
-          </div>
+          <GlobalSearch />
         </div>
         <div className="flex items-center gap-2">
           <LanguageSwitch variant="ghost" />
@@ -36,6 +42,10 @@ export default function TopBar() {
             </div>
           </div>
         </div>
+      </div>
+      {/* Mobile search row */}
+      <div className="md:hidden px-3 pb-3">
+        <GlobalSearch />
       </div>
     </header>
   );

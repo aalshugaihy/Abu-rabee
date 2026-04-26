@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Pencil } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
+import { downloadCsv, toCsv } from '../lib/csv';
 import {
   RequestRecord,
   RequestClassification,
@@ -44,11 +46,51 @@ type FormState = Partial<RequestRecord>;
 export default function RequestsPage() {
   const { t } = useLanguage();
   const { requests, addRequest, updateRequest, removeRequest } = useData();
+  const toast = useToast();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | RequestStatus>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | RequestPriority>('all');
   const [editing, setEditing] = useState<RequestRecord | null>(null);
   const [creating, setCreating] = useState(false);
+
+  function handleExport() {
+    const rows = filtered.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type ? tReqType(t, r.type) : '',
+      classification: r.classification ? tReqClassification(t, r.classification) : '',
+      priority: r.priority ? tReqPriority(t, r.priority) : '',
+      sector: tSector(t, r.sector),
+      department: tDept(t, r.department),
+      purpose: r.purpose ? tReqPurpose(t, r.purpose) : '',
+      direction: r.direction ? tReqDirection(t, r.direction) : '',
+      txnNumber: r.txnNumber ?? '',
+      txnName: r.txnName ?? '',
+      status: tReqStatus(t, r.status),
+      owner: r.owner ?? '',
+      date: r.date ?? '',
+      dueDate: r.dueDate ?? '',
+    }));
+    const csv = toCsv(rows, [
+      { key: 'id', header: t('requests.field.id') },
+      { key: 'name', header: t('requests.field.name') },
+      { key: 'type', header: t('requests.field.type') },
+      { key: 'classification', header: t('requests.field.classification') },
+      { key: 'priority', header: t('requests.field.priority') },
+      { key: 'sector', header: t('requests.field.sector') },
+      { key: 'department', header: t('requests.field.department') },
+      { key: 'purpose', header: t('requests.field.purpose') },
+      { key: 'direction', header: t('requests.field.direction') },
+      { key: 'txnNumber', header: t('requests.field.txnNumber') },
+      { key: 'txnName', header: t('requests.field.txnName') },
+      { key: 'status', header: t('requests.field.status') },
+      { key: 'owner', header: t('requests.field.owner') },
+      { key: 'date', header: t('requests.field.date') },
+      { key: 'dueDate', header: t('requests.field.dueDate') },
+    ]);
+    downloadCsv(`requests-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    toast.success(t('action.export') + ' ✓');
+  }
 
   const filtered = useMemo(() => {
     return requests.filter((r) => {
@@ -69,9 +111,14 @@ export default function RequestsPage() {
         title={t('requests.title')}
         subtitle={t('requests.subtitle')}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-            <Plus size={16} /> {t('action.addNew')}
-          </button>
+          <>
+            <button type="button" className="btn-secondary" onClick={handleExport} disabled={filtered.length === 0}>
+              <Download size={16} /> {t('action.export')}
+            </button>
+            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+              <Plus size={16} /> {t('action.addNew')}
+            </button>
+          </>
         }
       />
 
@@ -138,7 +185,12 @@ export default function RequestsPage() {
                     </button>
                     <button
                       className="btn-ghost px-2 py-1.5 text-rose-600 hover:bg-rose-50"
-                      onClick={() => { if (confirm(t('action.confirmDelete'))) removeRequest(r.id); }}
+                      onClick={() => {
+                        if (confirm(t('action.confirmDelete'))) {
+                          removeRequest(r.id);
+                          toast.success(`${r.id} ${t('action.delete')} ✓`);
+                        }
+                      }}
                       aria-label={t('action.delete')}
                     >
                       <Trash2 size={15} />
@@ -156,8 +208,13 @@ export default function RequestsPage() {
           initial={editing ?? undefined}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSubmit={(data) => {
-            if (editing) updateRequest(editing.id, data);
-            else addRequest({ name: data.name ?? '', status: data.status ?? 'new', ...data } as RequestRecord);
+            if (editing) {
+              updateRequest(editing.id, data);
+              toast.success(`${editing.id} ${t('action.save')} ✓`);
+            } else {
+              addRequest({ name: data.name ?? '', status: data.status ?? 'new', ...data } as RequestRecord);
+              toast.success(t('action.addNew') + ' ✓');
+            }
             setCreating(false); setEditing(null);
           }}
         />

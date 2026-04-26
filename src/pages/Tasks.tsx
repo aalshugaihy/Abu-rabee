@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Pencil, Wrench, UsersRound, ListChecks } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Wrench, UsersRound, ListChecks, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
+import { downloadCsv, toCsv } from '../lib/csv';
 import {
   TaskRecord,
   TaskKind,
@@ -40,11 +42,47 @@ export default function TasksPage() {
     tabParam === 'routine' ? 'routine' : tabParam === 'teams' ? 'teams' : 'all';
 
   const { tasks, committees, addTask, updateTask, removeTask } = useData();
+  const toast = useToast();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
   const [editing, setEditing] = useState<TaskRecord | null>(null);
   const [creating, setCreating] = useState<TaskKind | null>(null);
+
+  function handleExport() {
+    const rows = visible.map((task) => ({
+      id: task.id,
+      title: task.title,
+      kind: task.kind === 'routine' ? t('tasks.kind.routine') : t('tasks.kind.team'),
+      team: task.team ?? '',
+      assignee: task.assignee ?? '',
+      department: tDept(t, task.department),
+      priority: tTaskPriority(t, task.priority),
+      status: tTaskStatus(t, task.status),
+      frequency: task.frequency ? tTaskFrequency(t, task.frequency) : '',
+      dueDate: task.dueDate ?? '',
+      lastRun: task.lastRun ?? '',
+      nextRun: task.nextRun ?? '',
+      progress: task.progress,
+    }));
+    const csv = toCsv(rows, [
+      { key: 'id', header: t('tasks.field.id') },
+      { key: 'title', header: t('tasks.field.title') },
+      { key: 'kind', header: t('tasks.field.kind') },
+      { key: 'team', header: t('tasks.field.team') },
+      { key: 'assignee', header: t('tasks.field.assignee') },
+      { key: 'department', header: t('committees.field.department') },
+      { key: 'priority', header: t('tasks.field.priority') },
+      { key: 'status', header: t('tasks.field.status') },
+      { key: 'frequency', header: t('tasks.field.frequency') },
+      { key: 'dueDate', header: t('tasks.field.dueDate') },
+      { key: 'lastRun', header: t('tasks.field.lastRun') },
+      { key: 'nextRun', header: t('tasks.field.nextRun') },
+      { key: 'progress', header: t('tasks.field.progress') },
+    ]);
+    downloadCsv(`tasks-${tab}-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    toast.success(t('action.export') + ' ✓');
+  }
 
   useEffect(() => {
     setTab(tabParam === 'routine' ? 'routine' : tabParam === 'teams' ? 'teams' : 'all');
@@ -86,6 +124,9 @@ export default function TasksPage() {
         subtitle={intro}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="btn-ghost" onClick={handleExport} disabled={visible.length === 0}>
+              <Download size={16} /> {t('action.export')}
+            </button>
             <button type="button" className="btn-secondary" onClick={() => setCreating('routine')}>
               <Plus size={16} /> {t('tasks.kind.routine')}
             </button>
@@ -203,7 +244,12 @@ export default function TasksPage() {
                   <button
                     type="button"
                     className="btn-ghost px-2.5 py-1.5 text-rose-600 hover:bg-rose-50"
-                    onClick={() => { if (confirm(t('action.confirmDelete'))) removeTask(task.id); }}
+                    onClick={() => {
+                      if (confirm(t('action.confirmDelete'))) {
+                        removeTask(task.id);
+                        toast.success(`${task.id} ${t('action.delete')} ✓`);
+                      }
+                    }}
                   >
                     <Trash2 size={14} /> {t('action.delete')}
                   </button>
@@ -221,8 +267,10 @@ export default function TasksPage() {
           locale={locale}
           onClose={() => { setCreating(null); setEditing(null); }}
           onSubmit={(data) => {
-            if (editing) updateTask(editing.id, data);
-            else
+            if (editing) {
+              updateTask(editing.id, data);
+              toast.success(`${editing.id} ${t('action.save')} ✓`);
+            } else {
               addTask({
                 title: data.title ?? '',
                 kind: data.kind ?? 'team',
@@ -231,6 +279,8 @@ export default function TasksPage() {
                 progress: data.progress ?? 0,
                 ...data,
               } as TaskRecord);
+              toast.success(t('action.addNew') + ' ✓');
+            }
             setCreating(null); setEditing(null);
           }}
         />

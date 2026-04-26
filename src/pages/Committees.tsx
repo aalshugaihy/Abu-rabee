@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Pencil } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
 import { Committee, CommitteeScope, CommitteeStatus, CommitteeType, DepartmentKey } from '../data/types';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { committeeName, statusToTone, tCommitteeScope, tCommitteeType, tDept, tStatus } from '../lib/format';
+import { downloadCsv, toCsv } from '../lib/csv';
 
 const STATUSES: CommitteeStatus[] = ['forming', 'active', 'frozen', 'closed'];
 const SCOPES: CommitteeScope[] = ['internal', 'external', 'regional', 'international', 'sector'];
@@ -19,11 +21,47 @@ type FormState = Partial<Committee>;
 export default function CommitteesPage() {
   const { t, locale } = useLanguage();
   const { committees, addCommittee, updateCommittee, removeCommittee } = useData();
+  const toast = useToast();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | CommitteeStatus>('all');
   const [deptFilter, setDeptFilter] = useState<'all' | DepartmentKey>('all');
   const [editing, setEditing] = useState<Committee | null>(null);
   const [creating, setCreating] = useState(false);
+
+  function handleExport() {
+    const rows = filtered.map((c) => ({
+      id: c.id,
+      name: c.name,
+      nameEn: c.nameEn ?? '',
+      type: c.type ? tCommitteeType(t, c.type) : '',
+      scope: tCommitteeScope(t, c.scope),
+      department: tDept(t, c.department),
+      representative: c.representative ?? '',
+      head: c.head ?? '',
+      organizer: c.organizer ?? '',
+      status: tStatus(t, c.status),
+      members: c.members ?? '',
+      startDate: c.startDate ?? '',
+      endDate: c.endDate ?? '',
+    }));
+    const csv = toCsv(rows, [
+      { key: 'id', header: t('committees.field.id') },
+      { key: 'name', header: t('committees.field.name') },
+      { key: 'nameEn', header: t('committees.field.name') + ' (EN)' },
+      { key: 'type', header: t('committees.field.type') },
+      { key: 'scope', header: t('committees.field.scope') },
+      { key: 'department', header: t('committees.field.department') },
+      { key: 'representative', header: t('committees.field.representative') },
+      { key: 'head', header: t('committees.field.head') },
+      { key: 'organizer', header: t('committees.field.organizer') },
+      { key: 'status', header: t('committees.field.status') },
+      { key: 'members', header: t('committees.field.members') },
+      { key: 'startDate', header: t('committees.field.startDate') },
+      { key: 'endDate', header: t('committees.field.endDate') },
+    ]);
+    downloadCsv(`committees-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    toast.success(t('action.export') + ' ✓');
+  }
 
   const filtered = useMemo(() => {
     return committees.filter((c) => {
@@ -44,10 +82,16 @@ export default function CommitteesPage() {
         title={t('committees.title')}
         subtitle={t('committees.subtitle')}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-            <Plus size={16} />
-            {t('action.addNew')}
-          </button>
+          <>
+            <button type="button" className="btn-secondary" onClick={handleExport} disabled={filtered.length === 0}>
+              <Download size={16} />
+              {t('action.export')}
+            </button>
+            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+              <Plus size={16} />
+              {t('action.addNew')}
+            </button>
+          </>
         }
       />
 
@@ -116,7 +160,10 @@ export default function CommitteesPage() {
                       type="button"
                       className="btn-ghost px-2 py-1.5 text-rose-600 hover:bg-rose-50"
                       onClick={() => {
-                        if (confirm(t('action.confirmDelete'))) removeCommittee(c.id);
+                        if (confirm(t('action.confirmDelete'))) {
+                          removeCommittee(c.id);
+                          toast.success(`${c.id} ${t('action.delete')} ✓`);
+                        }
                       }}
                       aria-label={t('action.delete')}
                     >
@@ -138,8 +185,10 @@ export default function CommitteesPage() {
             setEditing(null);
           }}
           onSubmit={(data) => {
-            if (editing) updateCommittee(editing.id, data);
-            else
+            if (editing) {
+              updateCommittee(editing.id, data);
+              toast.success(`${editing.id} ${t('action.save')} ✓`);
+            } else {
               addCommittee({
                 name: data.name ?? '',
                 scope: data.scope ?? 'internal',
@@ -147,6 +196,8 @@ export default function CommitteesPage() {
                 active: data.active ?? true,
                 ...data,
               } as Committee);
+              toast.success(t('action.addNew') + ' ✓');
+            }
             setCreating(false);
             setEditing(null);
           }}

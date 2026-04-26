@@ -1,5 +1,6 @@
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
 import PageHeader from '../components/PageHeader';
 import LanguageSwitch from '../components/LanguageSwitch';
 import { RotateCcw } from 'lucide-react';
@@ -7,6 +8,7 @@ import { RotateCcw } from 'lucide-react';
 export default function SettingsPage() {
   const { t, locale } = useLanguage();
   const { resetAll } = useData();
+  const toast = useToast();
 
   return (
     <div>
@@ -30,7 +32,10 @@ export default function SettingsPage() {
             type="button"
             className="btn-secondary mt-4"
             onClick={() => {
-              if (confirm(locale === 'ar' ? 'إعادة تعيين البيانات؟' : 'Reset data?')) resetAll();
+              if (confirm(locale === 'ar' ? 'إعادة تعيين البيانات؟' : 'Reset data?')) {
+                resetAll();
+                toast.success(locale === 'ar' ? 'تمت إعادة التعيين' : 'Reset complete');
+              }
             }}
           >
             <RotateCcw size={14} /> {locale === 'ar' ? 'إعادة التعيين' : 'Reset'}
