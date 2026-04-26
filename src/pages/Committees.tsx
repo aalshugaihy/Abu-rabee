@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Pencil, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Search, Trash2, Pencil, Download, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
@@ -9,6 +10,7 @@ import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import CsvImportButton from '../components/CsvImportButton';
+import BulkBar from '../components/BulkBar';
 import { committeeName, statusToTone, tCommitteeScope, tCommitteeType, tDept, tStatus } from '../lib/format';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
@@ -29,6 +31,15 @@ export default function CommitteesPage() {
   const [deptFilter, setDeptFilter] = useState<'all' | DepartmentKey>('all');
   const [editing, setEditing] = useState<Committee | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   function handleExport() {
     const rows = filtered.map((c) => ({
@@ -144,6 +155,21 @@ export default function CommitteesPage() {
         </div>
       </div>
 
+      {selected.size > 0 && (
+        <BulkBar
+          count={selected.size}
+          onClear={() => setSelected(new Set())}
+          onDelete={() => {
+            if (confirm(t('bulk.confirmDelete'))) {
+              const ids = [...selected];
+              ids.forEach((sid) => removeCommittee(sid));
+              setSelected(new Set());
+              toast.success(`${ids.length} ${t('action.delete')} ✓`);
+            }
+          }}
+        />
+      )}
+
       {filtered.length === 0 ? (
         <div className="card">
           <EmptyState title={t('common.empty')} />
@@ -153,6 +179,22 @@ export default function CommitteesPage() {
           <table className="table">
             <thead>
               <tr>
+                <th className="w-8">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((c) => selected.has(c.id))}
+                    onChange={(e) => {
+                      const ids = filtered.map((c) => c.id);
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) ids.forEach((i) => next.add(i));
+                        else ids.forEach((i) => next.delete(i));
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <th>{t('committees.field.id')}</th>
                 <th>{t('committees.field.name')}</th>
                 <th>{t('committees.field.scope')}</th>
@@ -164,17 +206,30 @@ export default function CommitteesPage() {
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c.id}>
+                <tr key={c.id} className={selected.has(c.id) ? 'bg-brand-50/40' : ''}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${c.id}`}
+                      checked={selected.has(c.id)}
+                      onChange={() => toggleSelected(c.id)}
+                    />
+                  </td>
                   <td className="font-mono text-xs text-slate-600">{c.id}</td>
                   <td className="max-w-md">
-                    <div className="font-semibold text-slate-800">{committeeName(c, locale)}</div>
-                    {c.organizer && <div className="text-xs text-slate-500 mt-0.5">{c.organizer}</div>}
+                    <Link to={`/app/committees/${c.id}`} className="block hover:text-brand-700">
+                      <div className="font-semibold text-slate-800">{committeeName(c, locale)}</div>
+                      {c.organizer && <div className="text-xs text-slate-500 mt-0.5">{c.organizer}</div>}
+                    </Link>
                   </td>
                   <td className="text-slate-700">{tCommitteeScope(t, c.scope)}</td>
                   <td className="text-slate-700">{tDept(t, c.department)}</td>
                   <td className="text-slate-700 max-w-[12rem] truncate">{c.representative ?? '—'}</td>
                   <td><StatusBadge tone={statusToTone(c.status)}>{tStatus(t, c.status)}</StatusBadge></td>
                   <td className="text-end whitespace-nowrap">
+                    <Link to={`/app/committees/${c.id}`} className="btn-ghost px-2 py-1.5" aria-label="Open">
+                      <ExternalLink size={15} />
+                    </Link>
                     <button type="button" className="btn-ghost px-2 py-1.5" onClick={() => setEditing(c)} aria-label={t('action.edit')}>
                       <Pencil size={15} />
                     </button>

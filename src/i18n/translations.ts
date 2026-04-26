@@ -248,6 +248,59 @@ export const translations = {
     'import.empty': 'لم يتم العثور على بيانات صالحة في الملف',
     'import.failed': 'تعذر استيراد الملف',
     'form.required': 'هذا الحقل مطلوب',
+
+    // Detail / activity
+    'detail.back': 'الرجوع',
+    'detail.overview': 'نظرة عامة',
+    'detail.related': 'المرتبط',
+    'detail.activity': 'سجل النشاط',
+    'detail.relatedTasks': 'المهام المرتبطة',
+    'detail.createdAt': 'تاريخ الإنشاء',
+    'detail.updatedAt': 'آخر تحديث',
+    'activity.create': 'إنشاء',
+    'activity.update': 'تعديل',
+    'activity.delete': 'حذف',
+    'activity.committee': 'لجنة',
+    'activity.request': 'طلب',
+    'activity.task': 'مهمة',
+
+    // Calendar
+    'nav.calendar': 'التقويم',
+    'calendar.title': 'تقويم المهام',
+    'calendar.subtitle': 'عرض المهام حسب تواريخ الاستحقاق',
+    'calendar.prev': 'الشهر السابق',
+    'calendar.next': 'الشهر التالي',
+    'calendar.today': 'اليوم',
+    'calendar.noTasks': 'لا توجد مهام',
+
+    // Bulk
+    'bulk.selected': 'محدّد',
+    'bulk.deleteSelected': 'حذف المحدّد',
+    'bulk.confirmDelete': 'هل أنت متأكد من حذف العناصر المحدّدة؟',
+    'bulk.clear': 'إلغاء التحديد',
+
+    // Months (for calendar)
+    'months.0': 'يناير',
+    'months.1': 'فبراير',
+    'months.2': 'مارس',
+    'months.3': 'أبريل',
+    'months.4': 'مايو',
+    'months.5': 'يونيو',
+    'months.6': 'يوليو',
+    'months.7': 'أغسطس',
+    'months.8': 'سبتمبر',
+    'months.9': 'أكتوبر',
+    'months.10': 'نوفمبر',
+    'months.11': 'ديسمبر',
+
+    // Weekdays (Sunday-first)
+    'wd.0': 'الأحد',
+    'wd.1': 'الاثنين',
+    'wd.2': 'الثلاثاء',
+    'wd.3': 'الأربعاء',
+    'wd.4': 'الخميس',
+    'wd.5': 'الجمعة',
+    'wd.6': 'السبت',
   },
 
   en: {
@@ -495,5 +548,58 @@ export const translations = {
     'import.empty': 'No valid rows found in the file',
     'import.failed': 'Could not import the file',
     'form.required': 'This field is required',
+
+    // Detail / activity
+    'detail.back': 'Back',
+    'detail.overview': 'Overview',
+    'detail.related': 'Related',
+    'detail.activity': 'Activity log',
+    'detail.relatedTasks': 'Related tasks',
+    'detail.createdAt': 'Created',
+    'detail.updatedAt': 'Last updated',
+    'activity.create': 'Created',
+    'activity.update': 'Updated',
+    'activity.delete': 'Deleted',
+    'activity.committee': 'Committee',
+    'activity.request': 'Request',
+    'activity.task': 'Task',
+
+    // Calendar
+    'nav.calendar': 'Calendar',
+    'calendar.title': 'Tasks calendar',
+    'calendar.subtitle': 'Tasks grouped by their due date',
+    'calendar.prev': 'Previous month',
+    'calendar.next': 'Next month',
+    'calendar.today': 'Today',
+    'calendar.noTasks': 'No tasks',
+
+    // Bulk
+    'bulk.selected': 'selected',
+    'bulk.deleteSelected': 'Delete selected',
+    'bulk.confirmDelete': 'Delete the selected items?',
+    'bulk.clear': 'Clear selection',
+
+    // Months
+    'months.0': 'January',
+    'months.1': 'February',
+    'months.2': 'March',
+    'months.3': 'April',
+    'months.4': 'May',
+    'months.5': 'June',
+    'months.6': 'July',
+    'months.7': 'August',
+    'months.8': 'September',
+    'months.9': 'October',
+    'months.10': 'November',
+    'months.11': 'December',
+
+    // Weekdays (Sunday-first)
+    'wd.0': 'Sun',
+    'wd.1': 'Mon',
+    'wd.2': 'Tue',
+    'wd.3': 'Wed',
+    'wd.4': 'Thu',
+    'wd.5': 'Fri',
+    'wd.6': 'Sat',
   },
 } as const;

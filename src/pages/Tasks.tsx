@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Plus, Search, Trash2, Pencil, Wrench, UsersRound, ListChecks, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
@@ -217,16 +217,16 @@ export default function TasksPage() {
                   }`}
                 />
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <Link to={`/app/tasks/item/${task.id}`} className="min-w-0 group">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`badge ${task.kind === 'routine' ? 'bg-amber-50 text-amber-700' : 'bg-brand-50 text-brand-700'}`}>
                         {task.kind === 'routine' ? <><Wrench size={12} /> {t('tasks.kind.routine')}</> : <><UsersRound size={12} /> {t('tasks.kind.team')}</>}
                       </span>
                       <span className="font-mono text-[11px] text-slate-400">{task.id}</span>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900">{task.title}</h3>
+                    <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-700 transition">{task.title}</h3>
                     {task.description && <p className="mt-1 text-sm text-slate-600 line-clamp-2">{task.description}</p>}
-                  </div>
+                  </Link>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <StatusBadge tone={statusToTone(task.status)}>{tTaskStatus(t, task.status)}</StatusBadge>
                     <StatusBadge tone={priorityToTone(task.priority)}>{tTaskPriority(t, task.priority)}</StatusBadge>

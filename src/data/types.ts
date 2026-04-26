@@ -21,6 +21,8 @@ export interface Committee {
   confidentiality?: 'public' | 'restricted' | 'secret';
   budget?: number;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type DepartmentKey =
@@ -61,6 +63,8 @@ export interface RequestRecord {
   owner?: string;
   date?: string;
   dueDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type TaskKind = 'routine' | 'team';
@@ -84,4 +88,18 @@ export interface TaskRecord {
   lastRun?: string;
   nextRun?: string;
   progress: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ActivityEntity = 'committee' | 'request' | 'task';
+export type ActivityAction = 'create' | 'update' | 'delete';
+
+export interface ActivityLog {
+  id: string;
+  at: string;
+  entity: ActivityEntity;
+  action: ActivityAction;
+  entityId: string;
+  label?: string;
 }

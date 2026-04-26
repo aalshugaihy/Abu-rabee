@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Pencil, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Search, Trash2, Pencil, Download, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
 import CsvImportButton from '../components/CsvImportButton';
+import BulkBar from '../components/BulkBar';
 import {
   RequestRecord,
   RequestClassification,
@@ -54,6 +56,15 @@ export default function RequestsPage() {
   const [priorityFilter, setPriorityFilter] = useState<'all' | RequestPriority>('all');
   const [editing, setEditing] = useState<RequestRecord | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   function handleExport() {
     const rows = filtered.map((r) => ({
@@ -172,6 +183,21 @@ export default function RequestsPage() {
         </div>
       </div>
 
+      {selected.size > 0 && (
+        <BulkBar
+          count={selected.size}
+          onClear={() => setSelected(new Set())}
+          onDelete={() => {
+            if (confirm(t('bulk.confirmDelete'))) {
+              const ids = [...selected];
+              ids.forEach((sid) => removeRequest(sid));
+              setSelected(new Set());
+              toast.success(`${ids.length} ${t('action.delete')} ✓`);
+            }
+          }}
+        />
+      )}
+
       {filtered.length === 0 ? (
         <div className="card"><EmptyState title={t('common.empty')} /></div>
       ) : (
@@ -179,6 +205,22 @@ export default function RequestsPage() {
           <table className="table">
             <thead>
               <tr>
+                <th className="w-8">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((r) => selected.has(r.id))}
+                    onChange={(e) => {
+                      const ids = filtered.map((r) => r.id);
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) ids.forEach((i) => next.add(i));
+                        else ids.forEach((i) => next.delete(i));
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <th>{t('requests.field.id')}</th>
                 <th>{t('requests.field.name')}</th>
                 <th>{t('requests.field.type')}</th>
@@ -193,11 +235,21 @@ export default function RequestsPage() {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} className={selected.has(r.id) ? 'bg-brand-50/40' : ''}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${r.id}`}
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleSelected(r.id)}
+                    />
+                  </td>
                   <td className="font-mono text-xs text-slate-600 whitespace-nowrap">{r.id}</td>
                   <td className="font-medium text-slate-800 max-w-sm">
-                    <div className="truncate">{r.name}</div>
-                    {r.txnName && <div className="text-xs text-slate-500 mt-0.5">{r.txnName}</div>}
+                    <Link to={`/app/requests/${r.id}`} className="block hover:text-brand-700">
+                      <div className="truncate">{r.name}</div>
+                      {r.txnName && <div className="text-xs text-slate-500 mt-0.5">{r.txnName}</div>}
+                    </Link>
                   </td>
                   <td>{r.type ? tReqType(t, r.type) : '—'}</td>
                   <td>{r.classification ? tReqClassification(t, r.classification) : '—'}</td>
@@ -207,6 +259,9 @@ export default function RequestsPage() {
                   <td><StatusBadge tone={statusToTone(r.status)}>{tReqStatus(t, r.status)}</StatusBadge></td>
                   <td className="whitespace-nowrap text-xs text-slate-500">{r.date ?? '—'}</td>
                   <td className="text-end whitespace-nowrap">
+                    <Link to={`/app/requests/${r.id}`} className="btn-ghost px-2 py-1.5" aria-label="Open">
+                      <ExternalLink size={15} />
+                    </Link>
                     <button className="btn-ghost px-2 py-1.5" onClick={() => setEditing(r)} aria-label={t('action.edit')}>
                       <Pencil size={15} />
                     </button>

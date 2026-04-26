@@ -3,9 +3,13 @@ import LandingPage from './pages/Landing';
 import DashboardLayout from './layouts/DashboardLayout';
 import DashboardHome from './pages/Dashboard';
 import CommitteesPage from './pages/Committees';
+import CommitteeDetail from './pages/CommitteeDetail';
 import RequestsPage from './pages/Requests';
+import RequestDetail from './pages/RequestDetail';
 import TasksPage from './pages/Tasks';
+import TaskDetail from './pages/TaskDetail';
 import ReportsPage from './pages/Reports';
+import CalendarPage from './pages/Calendar';
 import SettingsPage from './pages/Settings';
 import NotFoundPage from './pages/NotFound';
 
@@ -16,9 +20,13 @@ export default function App() {
       <Route path="/app" element={<DashboardLayout />}>
         <Route index element={<DashboardHome />} />
         <Route path="committees" element={<CommitteesPage />} />
+        <Route path="committees/:id" element={<CommitteeDetail />} />
         <Route path="requests" element={<RequestsPage />} />
+        <Route path="requests/:id" element={<RequestDetail />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="tasks/item/:id" element={<TaskDetail />} />
         <Route path="tasks/:tab" element={<TasksPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
