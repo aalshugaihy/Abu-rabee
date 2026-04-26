@@ -36,6 +36,7 @@ export const translations = {
     'action.search': 'بحث',
     'action.filter': 'تصفية',
     'action.export': 'تصدير',
+    'action.import': 'استيراد',
     'action.print': 'طباعة',
     'action.viewAll': 'عرض الكل',
     'action.confirm': 'تأكيد',
@@ -242,6 +243,11 @@ export const translations = {
     'notif.followUp': 'يحتاج متابعة',
     'notif.newRequest': 'طلب جديد',
     'notif.viewAll': 'عرض كل التنبيهات',
+
+    // Import
+    'import.empty': 'لم يتم العثور على بيانات صالحة في الملف',
+    'import.failed': 'تعذر استيراد الملف',
+    'form.required': 'هذا الحقل مطلوب',
   },
 
   en: {
@@ -277,6 +283,7 @@ export const translations = {
     'action.search': 'Search',
     'action.filter': 'Filter',
     'action.export': 'Export',
+    'action.import': 'Import',
     'action.print': 'Print',
     'action.viewAll': 'View all',
     'action.confirm': 'Confirm',
@@ -483,5 +490,10 @@ export const translations = {
     'notif.followUp': 'Needs follow-up',
     'notif.newRequest': 'New request',
     'notif.viewAll': 'View all alerts',
+
+    // Import
+    'import.empty': 'No valid rows found in the file',
+    'import.failed': 'Could not import the file',
+    'form.required': 'This field is required',
   },
 } as const;

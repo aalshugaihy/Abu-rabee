@@ -8,8 +8,10 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import CsvImportButton from '../components/CsvImportButton';
 import { committeeName, statusToTone, tCommitteeScope, tCommitteeType, tDept, tStatus } from '../lib/format';
 import { downloadCsv, toCsv } from '../lib/csv';
+import { matchLabel } from '../lib/match';
 
 const STATUSES: CommitteeStatus[] = ['forming', 'active', 'frozen', 'closed'];
 const SCOPES: CommitteeScope[] = ['internal', 'external', 'regional', 'international', 'sector'];
@@ -83,6 +85,26 @@ export default function CommitteesPage() {
         subtitle={t('committees.subtitle')}
         actions={
           <>
+            <CsvImportButton<Committee>
+              mapRow={(row) => {
+                const name = row[t('committees.field.name')] || row['name'] || row['الاسم'];
+                if (!name) return null;
+                return {
+                  id: row[t('committees.field.id')] || row['id'] || `CMT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                  name,
+                  nameEn: row[`${t('committees.field.name')} (EN)`] || row['nameEn'] || undefined,
+                  scope: matchLabel(row[t('committees.field.scope')] || row['scope'], SCOPES, (s) => tCommitteeScope(t, s)) ?? 'internal',
+                  status: matchLabel(row[t('committees.field.status')] || row['status'], STATUSES, (s) => tStatus(t, s)) ?? 'active',
+                  type: matchLabel(row[t('committees.field.type')] || row['type'], TYPES, (s) => tCommitteeType(t, s)),
+                  department: matchLabel(row[t('committees.field.department')] || row['department'], DEPTS, (d) => tDept(t, d)),
+                  representative: row[t('committees.field.representative')] || row['representative'] || undefined,
+                  head: row[t('committees.field.head')] || row['head'] || undefined,
+                  organizer: row[t('committees.field.organizer')] || row['organizer'] || undefined,
+                  active: true,
+                };
+              }}
+              onImport={(rows) => rows.forEach((c) => addCommittee(c))}
+            />
             <button type="button" className="btn-secondary" onClick={handleExport} disabled={filtered.length === 0}>
               <Download size={16} />
               {t('action.export')}
@@ -225,8 +247,11 @@ function CommitteeForm({
       active: true,
     }
   );
+  const [touched, setTouched] = useState(false);
   const set = <K extends keyof Committee>(key: K, value: Committee[K] | undefined) =>
     setForm((p) => ({ ...p, [key]: value }));
+
+  const nameInvalid = touched && !form.name?.trim();
 
   return (
     <Modal
@@ -237,7 +262,14 @@ function CommitteeForm({
       footer={
         <>
           <button type="button" className="btn-ghost" onClick={onClose}>{t('action.cancel')}</button>
-          <button type="button" className="btn-primary" onClick={() => onSubmit(form)} disabled={!form.name}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setTouched(true);
+              if (form.name?.trim()) onSubmit(form);
+            }}
+          >
             {t('action.save')}
           </button>
         </>
@@ -246,7 +278,19 @@ function CommitteeForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="label">{t('committees.field.name')} *</label>
-          <input className="input" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} />
+          <input
+            className={`input ${nameInvalid ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : ''}`}
+            value={form.name ?? ''}
+            onChange={(e) => set('name', e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={nameInvalid}
+            aria-describedby={nameInvalid ? 'committee-name-error' : undefined}
+          />
+          {nameInvalid && (
+            <p id="committee-name-error" className="mt-1 text-xs font-semibold text-rose-600">
+              {t('form.required')}
+            </p>
+          )}
         </div>
         <div>
           <label className="label">{t('committees.field.scope')}</label>

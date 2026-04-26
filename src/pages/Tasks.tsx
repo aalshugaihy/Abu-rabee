@@ -5,6 +5,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { downloadCsv, toCsv } from '../lib/csv';
+import { matchLabel } from '../lib/match';
+import CsvImportButton from '../components/CsvImportButton';
 import {
   TaskRecord,
   TaskKind,
@@ -124,6 +126,34 @@ export default function TasksPage() {
         subtitle={intro}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <CsvImportButton<TaskRecord>
+              mapRow={(row) => {
+                const title = row[t('tasks.field.title')] || row['title'];
+                if (!title) return null;
+                const kind: 'routine' | 'team' = (() => {
+                  const cell = row[t('tasks.field.kind')] || row['kind'] || '';
+                  const v = cell.trim().toLowerCase();
+                  if (v === t('tasks.kind.routine').toLowerCase() || v === 'routine') return 'routine';
+                  return 'team';
+                })();
+                return {
+                  id: row[t('tasks.field.id')] || row['id'] || `${kind === 'routine' ? 'TSK-R' : 'TSK-T'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                  title,
+                  kind,
+                  team: row[t('tasks.field.team')] || row['team'] || undefined,
+                  assignee: row[t('tasks.field.assignee')] || row['assignee'] || undefined,
+                  priority: matchLabel(row[t('tasks.field.priority')] || row['priority'], PRIORITIES, (s) => tTaskPriority(t, s)) ?? 'medium',
+                  status: matchLabel(row[t('tasks.field.status')] || row['status'], STATUSES, (s) => tTaskStatus(t, s)) ?? 'planned',
+                  frequency: matchLabel(row[t('tasks.field.frequency')] || row['frequency'], FREQS, (s) => tTaskFrequency(t, s)),
+                  department: matchLabel(row[t('committees.field.department')] || row['department'], DEPTS, (d) => tDept(t, d)),
+                  dueDate: row[t('tasks.field.dueDate')] || row['dueDate'] || undefined,
+                  lastRun: row[t('tasks.field.lastRun')] || row['lastRun'] || undefined,
+                  nextRun: row[t('tasks.field.nextRun')] || row['nextRun'] || undefined,
+                  progress: Number(row[t('tasks.field.progress')] || row['progress'] || 0) || 0,
+                };
+              }}
+              onImport={(rows) => rows.forEach((tk) => addTask(tk))}
+            />
             <button type="button" className="btn-ghost" onClick={handleExport} disabled={visible.length === 0}>
               <Download size={16} /> {t('action.export')}
             </button>
@@ -313,9 +343,11 @@ function TaskForm({
       progress: 0,
     }
   );
+  const [touched, setTouched] = useState(false);
   const set = <K extends keyof TaskRecord>(key: K, value: TaskRecord[K] | undefined) =>
     setForm((p) => ({ ...p, [key]: value }));
 
+  const titleInvalid = touched && !form.title?.trim();
   const isRoutine = form.kind === 'routine';
 
   return (
@@ -327,14 +359,29 @@ function TaskForm({
       footer={
         <>
           <button className="btn-ghost" onClick={onClose}>{t('action.cancel')}</button>
-          <button className="btn-primary" onClick={() => onSubmit(form)} disabled={!form.title}>{t('action.save')}</button>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setTouched(true);
+              if (form.title?.trim()) onSubmit(form);
+            }}
+          >
+            {t('action.save')}
+          </button>
         </>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="label">{t('tasks.field.title')} *</label>
-          <input className="input" value={form.title ?? ''} onChange={(e) => set('title', e.target.value)} />
+          <input
+            className={`input ${titleInvalid ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : ''}`}
+            value={form.title ?? ''}
+            onChange={(e) => set('title', e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={titleInvalid}
+          />
+          {titleInvalid && <p className="mt-1 text-xs font-semibold text-rose-600">{t('form.required')}</p>}
         </div>
         <div className="md:col-span-2">
           <label className="label">{t('tasks.field.description')}</label>

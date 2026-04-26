@@ -4,6 +4,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { downloadCsv, toCsv } from '../lib/csv';
+import { matchLabel } from '../lib/match';
+import CsvImportButton from '../components/CsvImportButton';
 import {
   RequestRecord,
   RequestClassification,
@@ -112,6 +114,31 @@ export default function RequestsPage() {
         subtitle={t('requests.subtitle')}
         actions={
           <>
+            <CsvImportButton<RequestRecord>
+              mapRow={(row) => {
+                const name = row[t('requests.field.name')] || row['name'];
+                if (!name) return null;
+                const idCell = row[t('requests.field.id')] || row['id'];
+                return {
+                  id: idCell || `REQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000)}`,
+                  name,
+                  type: matchLabel(row[t('requests.field.type')] || row['type'], TYPES, (s) => tReqType(t, s)),
+                  classification: matchLabel(row[t('requests.field.classification')] || row['classification'], CLASSIFICATIONS, (s) => tReqClassification(t, s)),
+                  priority: matchLabel(row[t('requests.field.priority')] || row['priority'], PRIORITIES, (s) => tReqPriority(t, s)),
+                  status: matchLabel(row[t('requests.field.status')] || row['status'], STATUSES, (s) => tReqStatus(t, s)) ?? 'new',
+                  direction: matchLabel(row[t('requests.field.direction')] || row['direction'], DIRECTIONS, (s) => tReqDirection(t, s)),
+                  purpose: matchLabel(row[t('requests.field.purpose')] || row['purpose'], PURPOSES, (s) => tReqPurpose(t, s)),
+                  department: matchLabel(row[t('requests.field.department')] || row['department'], DEPTS, (s) => tDept(t, s)),
+                  sector: matchLabel(row[t('requests.field.sector')] || row['sector'], SECTORS, (s) => tSector(t, s)),
+                  txnNumber: row[t('requests.field.txnNumber')] || row['txnNumber'] || undefined,
+                  txnName: row[t('requests.field.txnName')] || row['txnName'] || undefined,
+                  owner: row[t('requests.field.owner')] || row['owner'] || undefined,
+                  date: row[t('requests.field.date')] || row['date'] || undefined,
+                  dueDate: row[t('requests.field.dueDate')] || row['dueDate'] || undefined,
+                };
+              }}
+              onImport={(rows) => rows.forEach((r) => addRequest(r))}
+            />
             <button type="button" className="btn-secondary" onClick={handleExport} disabled={filtered.length === 0}>
               <Download size={16} /> {t('action.export')}
             </button>
@@ -236,8 +263,10 @@ function RequestForm({
   const [form, setForm] = useState<FormState>(
     initial ?? { name: '', status: 'new', direction: 'in', classification: 'internal' }
   );
+  const [touched, setTouched] = useState(false);
   const set = <K extends keyof RequestRecord>(key: K, value: RequestRecord[K] | undefined) =>
     setForm((p) => ({ ...p, [key]: value }));
+  const nameInvalid = touched && !form.name?.trim();
 
   return (
     <Modal
@@ -248,14 +277,29 @@ function RequestForm({
       footer={
         <>
           <button className="btn-ghost" onClick={onClose}>{t('action.cancel')}</button>
-          <button className="btn-primary" onClick={() => onSubmit(form)} disabled={!form.name}>{t('action.save')}</button>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setTouched(true);
+              if (form.name?.trim()) onSubmit(form);
+            }}
+          >
+            {t('action.save')}
+          </button>
         </>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="label">{t('requests.field.name')} *</label>
-          <input className="input" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} />
+          <input
+            className={`input ${nameInvalid ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : ''}`}
+            value={form.name ?? ''}
+            onChange={(e) => set('name', e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={nameInvalid}
+          />
+          {nameInvalid && <p className="mt-1 text-xs font-semibold text-rose-600">{t('form.required')}</p>}
         </div>
         <div>
           <label className="label">{t('requests.field.type')}</label>
