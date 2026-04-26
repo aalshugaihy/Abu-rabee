@@ -86,29 +86,44 @@ To enable:
 
 Build command: `npm run build` · Publish directory: `dist`. SPA fallback is already included via `public/_redirects` (`/* /index.html 200`).
 
-### Option C — Self-hosted (Docker + Nginx)
+### Option C — Self-hosted full stack (`docker compose up`)
 
-A multi-stage `Dockerfile` and an `nginx.conf` are provided. The Nginx config sets cache-control for hashed assets, an SPA fallback, gzip, and a few security headers.
+The repo ships a top-level `docker-compose.yml` that builds and runs **both**
+the API server and the Nginx-served SPA together:
 
 ```bash
-# Build the image
-docker build -t abu-rabee .
+cp .env.example .env          # generate JWT_SECRET, set CLIENT_ORIGIN
+docker compose up --build     # builds both images
+# → http://localhost:8080      (frontend)
+# → http://localhost:4000/api/docs   (Swagger UI)
+```
 
-# Run on port 8080
-docker run --rm -p 8080:80 abu-rabee
+Demo accounts after first boot (run `docker compose exec server npm run seed`):
+
+| email | password | role |
+|---|---|---|
+| `admin@aburabee.gov`  | `admin1234`  | admin  |
+| `staff@aburabee.gov`  | `staff1234`  | staff  |
+| `viewer@aburabee.gov` | `viewer1234` | viewer |
+
+The SQLite database is persisted in the named volume `abu-rabee-data` so it
+survives container restarts. Use `docker compose down -v` to wipe it.
+
+Both images include healthchecks (`/` for the SPA, `/health` for the API)
+and the server runs `prisma db push` automatically on first start.
+
+### Option D — Self-hosted SPA only (Docker + Nginx)
+
+If you don't need the backend (localStorage mode), build just the frontend:
+
+```bash
+docker build -t abu-rabee-client .
+docker run --rm -p 8080:80 abu-rabee-client
 # → http://localhost:8080
 ```
 
-Or with `docker compose`:
-
-```yaml
-services:
-  app:
-    build: .
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-```
+The Nginx config sets cache-control for hashed assets, an SPA fallback, gzip,
+and a few security headers.
 
 ### Sub-path deployments
 
@@ -120,9 +135,34 @@ VITE_BASE=/abu-rabee/ npm run build
 
 Both `<base>` paths and the React Router `basename` pick up the value automatically (via `import.meta.env.BASE_URL`).
 
+## Backend features (when `VITE_API_URL` is set)
+
+- **JWT cookie auth** with rotating refresh tokens. *Remember me* extends
+  the refresh TTL from 7 to 30 days; logout revokes the active token.
+- **Role-based access**: `admin`, `staff` (read+write), `viewer` (read-only).
+  The first registered user is auto-promoted to admin.
+- **REST API** for committees, requests, tasks, comments, activity, sub-tasks
+  and dependencies (cycle-detected on the server).
+- **Realtime** updates over Socket.io: writes broadcast `data:changed`,
+  every connected client refetches the affected entity.
+- **Saved filter presets** per user (committees / requests / tasks pages).
+- **Full activity log** filterable by entity, action, user, free text and
+  date range — paged on the server, exportable to CSV.
+- **Email notifications** via Nodemailer (smtp / json / noop transports)
+  fire on task assignment and on new comments mentioning the assignee.
+- **OpenAPI 3.0** spec served at `/api/openapi.json` and rendered in
+  **Swagger UI** at `/api/docs`.
+
+See [`server/README.md`](./server/README.md) for the full endpoint list.
+
 ## Continuous Integration
 
-`.github/workflows/ci.yml` runs `typecheck` and `build` on every push and pull request to `main`, and uploads the `dist/` artifact for inspection.
+`.github/workflows/ci.yml` runs the full pipeline on every push and pull
+request to `main`:
+
+1. **Frontend** — typecheck → vitest → vite build → upload `dist/`.
+2. **Server** — install deps → `prisma generate` → typecheck → vitest
+   (with isolated SQLite test DB).
 
 ## Project structure
 

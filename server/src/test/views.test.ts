@@ -15,12 +15,12 @@ beforeAll(async () => {
   const a = await request(app)
     .post('/api/auth/register')
     .send({ email: 'a@views.test', password: 'password123', name: 'A' });
-  cookieA = (a.headers['set-cookie'] as string[]).map((c) => c.split(';')[0]).join('; ');
+  cookieA = (a.headers['set-cookie'] as unknown as string[]).map((c) => c.split(';')[0]).join('; ');
 
   const b = await request(app)
     .post('/api/auth/register')
     .send({ email: 'b@views.test', password: 'password123', name: 'B' });
-  cookieB = (b.headers['set-cookie'] as string[]).map((c) => c.split(';')[0]).join('; ');
+  cookieB = (b.headers['set-cookie'] as unknown as string[]).map((c) => c.split(';')[0]).join('; ');
 });
 
 afterAll(async () => prisma.$disconnect());

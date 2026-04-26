@@ -14,7 +14,7 @@ beforeAll(async () => {
   const reg = await request(app)
     .post('/api/auth/register')
     .send({ email: 'a@activity.test', password: 'password123', name: 'Activity Admin' });
-  cookie = (reg.headers['set-cookie'] as string[]).map((c) => c.split(';')[0]).join('; ');
+  cookie = (reg.headers['set-cookie'] as unknown as string[]).map((c) => c.split(';')[0]).join('; ');
 
   // Generate a few activity entries via task creation.
   for (let i = 0; i < 5; i++) {
