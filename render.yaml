@@ -71,11 +71,11 @@ services:
         value: noop
 
   # ---- Static SPA ------------------------------------------------------------
+  # Static sites are deployed to Render's global CDN, so they don't accept
+  # a `region` or `plan` field — they're always free and globally distributed.
   - type: web
     name: abu-rabee-client
     runtime: static
-    region: frankfurt
-    plan: free
     rootDir: .
     autoDeploy: true
     buildCommand: |
