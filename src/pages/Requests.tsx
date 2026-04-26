@@ -8,6 +8,7 @@ import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
 import CsvImportButton from '../components/CsvImportButton';
 import BulkBar from '../components/BulkBar';
+import MultiSelect from '../components/MultiSelect';
 import {
   RequestRecord,
   RequestClassification,
@@ -52,7 +53,7 @@ export default function RequestsPage() {
   const { requests, addRequest, updateRequest, removeRequest } = useData();
   const toast = useToast();
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | RequestStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<RequestStatus[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<'all' | RequestPriority>('all');
   const [editing, setEditing] = useState<RequestRecord | null>(null);
   const [creating, setCreating] = useState(false);
@@ -107,7 +108,7 @@ export default function RequestsPage() {
 
   const filtered = useMemo(() => {
     return requests.filter((r) => {
-      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(r.status)) return false;
       if (priorityFilter !== 'all' && r.priority !== priorityFilter) return false;
       if (query) {
         const q = query.toLowerCase();
@@ -172,10 +173,12 @@ export default function RequestsPage() {
               className="input ps-10"
             />
           </div>
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as never)}>
-            <option value="all">{t('common.all')} — {t('requests.field.status')}</option>
-            {STATUSES.map((s) => (<option key={s} value={s}>{tReqStatus(t, s)}</option>))}
-          </select>
+          <MultiSelect<RequestStatus>
+            options={STATUSES.map((s) => ({ value: s, label: tReqStatus(t, s) }))}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder={t('requests.field.status')}
+          />
           <select className="select" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as never)}>
             <option value="all">{t('common.all')} — {t('requests.field.priority')}</option>
             {PRIORITIES.map((s) => (<option key={s} value={s}>{tReqPriority(t, s)}</option>))}

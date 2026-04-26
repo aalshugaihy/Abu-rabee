@@ -9,6 +9,7 @@ import {
   Wrench,
   UsersRound,
   CalendarDays,
+  Kanban,
   ChevronLeft,
   ChevronRight,
   X,
@@ -20,7 +21,7 @@ import { useUI } from '../contexts/UIContext';
 
 type Item = {
   to: string;
-  labelKey: 'nav.dashboard' | 'nav.committees' | 'nav.requests' | 'nav.tasks' | 'nav.tasks.routine' | 'nav.tasks.teams' | 'nav.calendar' | 'nav.reports' | 'nav.settings';
+  labelKey: 'nav.dashboard' | 'nav.committees' | 'nav.requests' | 'nav.tasks' | 'nav.tasks.routine' | 'nav.tasks.teams' | 'nav.tasks.board' | 'nav.calendar' | 'nav.reports' | 'nav.settings';
   icon: LucideIcon;
   end?: boolean;
 };
@@ -30,6 +31,7 @@ const items: Item[] = [
   { to: '/app/committees', labelKey: 'nav.committees', icon: Users },
   { to: '/app/requests', labelKey: 'nav.requests', icon: Inbox },
   { to: '/app/tasks', labelKey: 'nav.tasks', icon: ListChecks },
+  { to: '/app/tasks/board', labelKey: 'nav.tasks.board', icon: Kanban },
   { to: '/app/tasks/routine', labelKey: 'nav.tasks.routine', icon: Wrench },
   { to: '/app/tasks/teams', labelKey: 'nav.tasks.teams', icon: UsersRound },
   { to: '/app/calendar', labelKey: 'nav.calendar', icon: CalendarDays },

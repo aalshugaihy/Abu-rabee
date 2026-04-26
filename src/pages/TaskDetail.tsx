@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import StatusBadge from '../components/StatusBadge';
 import ActivityFeed from '../components/ActivityFeed';
+import CommentsThread from '../components/CommentsThread';
 import {
   committeeName,
   priorityToTone,
@@ -119,6 +120,11 @@ export default function TaskDetail() {
               </Link>
             </div>
           )}
+
+          <div className="card p-6">
+            <h2 className="text-base font-bold text-slate-900 mb-4">{t('detail.comments')}</h2>
+            <CommentsThread entity="task" entityId={task.id} />
+          </div>
         </div>
 
         <div className="card p-6">

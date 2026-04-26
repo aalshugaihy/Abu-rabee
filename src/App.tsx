@@ -7,6 +7,7 @@ import CommitteeDetail from './pages/CommitteeDetail';
 import RequestsPage from './pages/Requests';
 import RequestDetail from './pages/RequestDetail';
 import TasksPage from './pages/Tasks';
+import TasksBoard from './pages/TasksBoard';
 import TaskDetail from './pages/TaskDetail';
 import ReportsPage from './pages/Reports';
 import CalendarPage from './pages/Calendar';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/:id" element={<RequestDetail />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="tasks/board" element={<TasksBoard />} />
         <Route path="tasks/item/:id" element={<TaskDetail />} />
         <Route path="tasks/:tab" element={<TasksPage />} />
         <Route path="calendar" element={<CalendarPage />} />

@@ -103,3 +103,12 @@ export interface ActivityLog {
   entityId: string;
   label?: string;
 }
+
+export interface Comment {
+  id: string;
+  entity: ActivityEntity;
+  entityId: string;
+  author: string;
+  text: string;
+  at: string;
+}

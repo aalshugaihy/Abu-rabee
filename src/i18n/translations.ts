@@ -257,12 +257,24 @@ export const translations = {
     'detail.relatedTasks': 'المهام المرتبطة',
     'detail.createdAt': 'تاريخ الإنشاء',
     'detail.updatedAt': 'آخر تحديث',
+    'detail.comments': 'التعليقات',
+    'comments.placeholder': 'اكتب تعليقاً…',
+    'comments.author': 'الاسم',
+    'comments.add': 'إضافة تعليق',
+    'comments.empty': 'لا توجد تعليقات بعد',
     'activity.create': 'إنشاء',
     'activity.update': 'تعديل',
     'activity.delete': 'حذف',
     'activity.committee': 'لجنة',
     'activity.request': 'طلب',
     'activity.task': 'مهمة',
+
+    // Tasks board / status filter
+    'nav.tasks.board': 'لوحة كانبان',
+    'tasks.tab.board': 'لوحة كانبان (Kanban)',
+    'tasks.board.intro': 'اسحب مهامك بين أعمدة الحالة لتحديثها مباشرة.',
+    'filter.statusAll': 'كل الحالات',
+    'filter.statusN': 'حالات محددة',
 
     // Calendar
     'nav.calendar': 'التقويم',
@@ -557,12 +569,24 @@ export const translations = {
     'detail.relatedTasks': 'Related tasks',
     'detail.createdAt': 'Created',
     'detail.updatedAt': 'Last updated',
+    'detail.comments': 'Comments',
+    'comments.placeholder': 'Write a comment…',
+    'comments.author': 'Name',
+    'comments.add': 'Add comment',
+    'comments.empty': 'No comments yet',
     'activity.create': 'Created',
     'activity.update': 'Updated',
     'activity.delete': 'Deleted',
     'activity.committee': 'Committee',
     'activity.request': 'Request',
     'activity.task': 'Task',
+
+    // Tasks board / status filter
+    'nav.tasks.board': 'Kanban board',
+    'tasks.tab.board': 'Kanban board',
+    'tasks.board.intro': 'Drag tasks between status columns to update them.',
+    'filter.statusAll': 'All statuses',
+    'filter.statusN': 'statuses selected',
 
     // Calendar
     'nav.calendar': 'Calendar',

@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
 import CsvImportButton from '../components/CsvImportButton';
+import MultiSelect from '../components/MultiSelect';
 import {
   TaskRecord,
   TaskKind,
@@ -47,7 +48,7 @@ export default function TasksPage() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus[]>([]);
   const [editing, setEditing] = useState<TaskRecord | null>(null);
   const [creating, setCreating] = useState<TaskKind | null>(null);
 
@@ -94,7 +95,7 @@ export default function TasksPage() {
     return tasks.filter((task) => {
       if (tab === 'routine' && task.kind !== 'routine') return false;
       if (tab === 'teams' && task.kind !== 'team') return false;
-      if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(task.status)) return false;
       if (query) {
         const q = query.toLowerCase();
         const blob = `${task.title} ${task.team ?? ''} ${task.assignee ?? ''}`.toLowerCase();
@@ -196,10 +197,12 @@ export default function TasksPage() {
               className="input ps-10"
             />
           </div>
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as never)}>
-            <option value="all">{t('common.all')} — {t('tasks.field.status')}</option>
-            {STATUSES.map((s) => (<option key={s} value={s}>{tTaskStatus(t, s)}</option>))}
-          </select>
+          <MultiSelect<TaskStatus>
+            options={STATUSES.map((s) => ({ value: s, label: tTaskStatus(t, s) }))}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder={t('tasks.field.status')}
+          />
         </div>
       </div>
 

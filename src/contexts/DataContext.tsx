@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { ActivityAction, ActivityEntity, ActivityLog, Committee, RequestRecord, TaskRecord } from '../data/types';
+import { ActivityAction, ActivityEntity, ActivityLog, Comment, Committee, RequestRecord, TaskRecord } from '../data/types';
 import { seedCommittees, seedRequests, seedTasks } from '../data/seed';
 
 type DataContextValue = {
@@ -7,6 +7,7 @@ type DataContextValue = {
   requests: RequestRecord[];
   tasks: TaskRecord[];
   activity: ActivityLog[];
+  comments: Comment[];
   addCommittee: (c: Omit<Committee, 'id'> & { id?: string }) => void;
   updateCommittee: (id: string, patch: Partial<Committee>) => void;
   removeCommittee: (id: string) => void;
@@ -16,6 +17,8 @@ type DataContextValue = {
   addTask: (t: Omit<TaskRecord, 'id'> & { id?: string }) => void;
   updateTask: (id: string, patch: Partial<TaskRecord>) => void;
   removeTask: (id: string) => void;
+  addComment: (c: Omit<Comment, 'id' | 'at'>) => void;
+  removeComment: (id: string) => void;
   resetAll: () => void;
 };
 
@@ -26,6 +29,7 @@ const STORAGE_KEYS = {
   requests: 'abu-rabee.requests',
   tasks: 'abu-rabee.tasks',
   activity: 'abu-rabee.activity',
+  comments: 'abu-rabee.comments',
 } as const;
 
 const ACTIVITY_LIMIT = 200;
@@ -66,11 +70,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<RequestRecord[]>(() => load(STORAGE_KEYS.requests, seedRequests));
   const [tasks, setTasks] = useState<TaskRecord[]>(() => load(STORAGE_KEYS.tasks, seedTasks));
   const [activity, setActivity] = useState<ActivityLog[]>(() => load(STORAGE_KEYS.activity, [] as ActivityLog[]));
+  const [comments, setComments] = useState<Comment[]>(() => load(STORAGE_KEYS.comments, [] as Comment[]));
 
   useEffect(() => save(STORAGE_KEYS.committees, committees), [committees]);
   useEffect(() => save(STORAGE_KEYS.requests, requests), [requests]);
   useEffect(() => save(STORAGE_KEYS.tasks, tasks), [tasks]);
   useEffect(() => save(STORAGE_KEYS.activity, activity), [activity]);
+  useEffect(() => save(STORAGE_KEYS.comments, comments), [comments]);
 
   const log = useCallback((entity: ActivityEntity, action: ActivityAction, entityId: string, label?: string) => {
     setActivity((prev) => {
@@ -197,11 +203,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [log]
   );
 
+  const addComment = useCallback((c: Omit<Comment, 'id' | 'at'>) => {
+    setComments((prev) => [
+      { ...c, id: `CMT-MSG-${Date.now()}-${Math.floor(Math.random() * 1000)}`, at: new Date().toISOString() },
+      ...prev,
+    ]);
+  }, []);
+  const removeComment = useCallback((id: string) => {
+    setComments((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   const resetAll = useCallback(() => {
     setCommittees(seedCommittees);
     setRequests(seedRequests);
     setTasks(seedTasks);
     setActivity([]);
+    setComments([]);
   }, []);
 
   const value = useMemo(
@@ -210,6 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       requests,
       tasks,
       activity,
+      comments,
       addCommittee,
       updateCommittee,
       removeCommittee,
@@ -219,6 +237,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addTask,
       updateTask,
       removeTask,
+      addComment,
+      removeComment,
       resetAll,
     }),
     [
@@ -226,6 +246,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       requests,
       tasks,
       activity,
+      comments,
       addCommittee,
       updateCommittee,
       removeCommittee,
@@ -235,6 +256,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addTask,
       updateTask,
       removeTask,
+      addComment,
+      removeComment,
       resetAll,
     ]
   );
