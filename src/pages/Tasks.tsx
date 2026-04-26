@@ -8,6 +8,7 @@ import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
 import CsvImportButton from '../components/CsvImportButton';
 import MultiSelect from '../components/MultiSelect';
+import SavedViews from '../components/SavedViews';
 import {
   TaskRecord,
   TaskKind,
@@ -49,6 +50,10 @@ export default function TasksPage() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority[]>([]);
+  const [deptFilter, setDeptFilter] = useState<DepartmentKey[]>([]);
+  const [dueFrom, setDueFrom] = useState('');
+  const [dueTo, setDueTo] = useState('');
   const [editing, setEditing] = useState<TaskRecord | null>(null);
   const [creating, setCreating] = useState<TaskKind | null>(null);
 
@@ -96,6 +101,10 @@ export default function TasksPage() {
       if (tab === 'routine' && task.kind !== 'routine') return false;
       if (tab === 'teams' && task.kind !== 'team') return false;
       if (statusFilter.length > 0 && !statusFilter.includes(task.status)) return false;
+      if (priorityFilter.length > 0 && !priorityFilter.includes(task.priority)) return false;
+      if (deptFilter.length > 0 && (!task.department || !deptFilter.includes(task.department))) return false;
+      if (dueFrom && (!task.dueDate || task.dueDate < dueFrom)) return false;
+      if (dueTo && (!task.dueDate || task.dueDate > dueTo)) return false;
       if (query) {
         const q = query.toLowerCase();
         const blob = `${task.title} ${task.team ?? ''} ${task.assignee ?? ''}`.toLowerCase();
@@ -186,7 +195,7 @@ export default function TasksPage() {
       </div>
 
       <div className="card p-4 mb-5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2 relative">
             <Search size={16} className="absolute top-1/2 -translate-y-1/2 start-3 text-slate-400" />
             <input
@@ -203,6 +212,36 @@ export default function TasksPage() {
             onChange={setStatusFilter}
             placeholder={t('tasks.field.status')}
           />
+          <MultiSelect<TaskPriority>
+            options={PRIORITIES.map((p) => ({ value: p, label: tTaskPriority(t, p) }))}
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            placeholder={t('tasks.field.priority')}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <MultiSelect<DepartmentKey>
+            options={DEPTS.map((d) => ({ value: d, label: tDept(t, d) }))}
+            value={deptFilter}
+            onChange={setDeptFilter}
+            placeholder={t('committees.field.department')}
+          />
+          <input type="date" className="input" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} aria-label={t('filter.dateFrom')} />
+          <input type="date" className="input" value={dueTo} onChange={(e) => setDueTo(e.target.value)} aria-label={t('filter.dateTo')} />
+          <div className="flex items-center justify-end">
+            <SavedViews<{ query: string; status: TaskStatus[]; priority: TaskPriority[]; department: DepartmentKey[]; from: string; to: string }>
+              page={`tasks-${tab}`}
+              current={{ query, status: statusFilter, priority: priorityFilter, department: deptFilter, from: dueFrom, to: dueTo }}
+              onApply={(f) => {
+                setQuery(f.query ?? '');
+                setStatusFilter(f.status ?? []);
+                setPriorityFilter(f.priority ?? []);
+                setDeptFilter(f.department ?? []);
+                setDueFrom(f.from ?? '');
+                setDueTo(f.to ?? '');
+              }}
+            />
+          </div>
         </div>
       </div>
 

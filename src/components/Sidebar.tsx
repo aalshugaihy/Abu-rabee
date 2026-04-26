@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Kanban,
   ShieldCheck,
+  History,
   ChevronLeft,
   ChevronRight,
   X,
@@ -33,6 +34,7 @@ type Item = {
     | 'nav.tasks.board'
     | 'nav.calendar'
     | 'nav.reports'
+    | 'nav.activity'
     | 'nav.admin'
     | 'nav.settings';
   icon: LucideIcon;
@@ -50,6 +52,7 @@ const items: Item[] = [
   { to: '/app/tasks/teams', labelKey: 'nav.tasks.teams', icon: UsersRound },
   { to: '/app/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
   { to: '/app/reports', labelKey: 'nav.reports', icon: BarChart3 },
+  { to: '/app/activity', labelKey: 'nav.activity', icon: History },
   { to: '/app/admin', labelKey: 'nav.admin', icon: ShieldCheck, adminOnly: true },
   { to: '/app/settings', labelKey: 'nav.settings', icon: Settings },
 ];

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { canWrite, requireAuth } from '../auth.js';
 import { broadcast } from '../sockets.js';
+import { sendEmail } from '../email.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -60,6 +61,19 @@ router.post('/', canWrite, async (req, res) => {
     data: { entity: 'task', action: 'create', entityId: created.id, label: created.title, userId: req.user!.id },
   });
   broadcast('task', 'create');
+
+  // Notify assignee on creation if it matches a known user.
+  if (created.assignee && created.assignee !== req.user?.name) {
+    prisma.user.findFirst({ where: { name: created.assignee } }).then((u) => {
+      if (!u) return;
+      sendEmail({
+        to: u.email,
+        subject: `[${created.id}] new task assigned: ${created.title}`,
+        text: `${created.title}\n\n${created.description ?? ''}`.trim(),
+      }).catch(() => null);
+    });
+  }
+
   res.status(201).json(created);
 });
 

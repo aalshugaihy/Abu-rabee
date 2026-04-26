@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 
 import authRoutes from './routes/auth.js';
 import committeesRoutes from './routes/committees.js';
@@ -8,6 +9,8 @@ import requestsRoutes from './routes/requests.js';
 import tasksRoutes from './routes/tasks.js';
 import commentsRoutes from './routes/comments.js';
 import activityRoutes from './routes/activity.js';
+import viewsRoutes from './routes/views.js';
+import { openApiSpec } from './openapi.js';
 
 /**
  * Build a fresh Express app with all routes mounted but without binding to
@@ -30,6 +33,18 @@ export function createApp(): express.Express {
   app.use('/api/tasks', tasksRoutes);
   app.use('/api/comments', commentsRoutes);
   app.use('/api/activity', activityRoutes);
+  app.use('/api/views', viewsRoutes);
+
+  // Swagger UI under /api/docs (raw spec also at /api/openapi.json).
+  app.get('/api/openapi.json', (_req, res) => res.json(openApiSpec));
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(openApiSpec, {
+      customSiteTitle: 'Abu-Rabee API',
+      swaggerOptions: { persistAuthorization: true },
+    })
+  );
 
   app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

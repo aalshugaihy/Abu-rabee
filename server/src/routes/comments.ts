@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { canWrite, requireAuth } from '../auth.js';
 import { broadcast } from '../sockets.js';
+import { sendEmail } from '../email.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -36,6 +37,23 @@ router.post('/', canWrite, async (req, res) => {
     },
   });
   broadcast('comment', 'create');
+
+  // Notify the task assignee (if any and not the same person) — fire-and-forget.
+  if (created.entity === 'task') {
+    prisma.task.findUnique({ where: { id: created.entityId } }).then((task) => {
+      if (!task?.assignee || task.assignee === req.user?.name) return;
+      // Try to find a matching user by display name.
+      prisma.user.findFirst({ where: { name: task.assignee } }).then((u) => {
+        if (!u) return;
+        sendEmail({
+          to: u.email,
+          subject: `[${task.id}] new comment from ${created.authorName}`,
+          text: `${created.text}\n\n— ${created.authorName}`,
+        }).catch(() => null);
+      });
+    });
+  }
+
   res.status(201).json(created);
 });
 

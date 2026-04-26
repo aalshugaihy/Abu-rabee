@@ -24,8 +24,41 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  comments  Comment[]
-  activity  ActivityLog[]
+  comments      Comment[]
+  activity      ActivityLog[]
+  refreshTokens RefreshToken[]
+  savedViews    SavedView[]
+}
+
+// Long-lived rotating refresh tokens. The hash (not the secret itself) is
+// stored so a leaked DB row does not let an attacker re-use the token.
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  rememberMe Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Per-user saved filter presets for a list page (committees / requests / tasks).
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  page      String
+  name      String
+  filters   String   // JSON-encoded
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, page])
 }
 
 model Committee {
@@ -91,6 +124,7 @@ model Task {
   nextRun      String?
   progress     Int      @default(0)
   parentTaskId String?
+  orderIndex   Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

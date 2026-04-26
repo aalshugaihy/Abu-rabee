@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,9 +26,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(email, password);
+        await login(email, password, rememberMe);
       } else {
-        await registerFn({ email, password, name });
+        await registerFn({ email, password, name, rememberMe });
       }
       navigate('/app');
     } catch (err) {
@@ -98,6 +99,15 @@ export default function LoginPage() {
                 required
               />
             </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded"
+              />
+              {t('auth.rememberMe')}
+            </label>
             {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
             <button type="submit" className="btn-primary w-full justify-center" disabled={loading || !apiAvailable}>
               <LogIn size={14} /> {mode === 'login' ? t('auth.signIn') : t('action.save')}

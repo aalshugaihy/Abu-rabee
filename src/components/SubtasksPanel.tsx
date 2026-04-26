@@ -1,20 +1,39 @@
-import { FormEvent, useState } from 'react';
+import { DragEvent, FormEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from './StatusBadge';
 import { statusToTone, tTaskStatus } from '../lib/format';
 import { TaskRecord } from '../data/types';
+import { api } from '../lib/api';
+import { apiAvailable } from '../lib/api';
 
 export default function SubtasksPanel({ task }: { task: TaskRecord }) {
   const { t } = useLanguage();
-  const { tasks, addTask, removeTask } = useData();
+  const { tasks, addTask, removeTask, updateTask } = useData();
   const toast = useToast();
+  const { user } = useAuth();
+  const remoteMode = apiAvailable && !!user;
   const [title, setTitle] = useState('');
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  const subs = tasks.filter((tk) => tk.parentTaskId === task.id);
+  // Show subs in their persisted order. Falls back to creation order when
+  // orderIndex is missing (e.g. legacy local data).
+  const subs = useMemo(() => {
+    return tasks
+      .filter((tk) => tk.parentTaskId === task.id)
+      .slice()
+      .sort((a, b) => {
+        const ai = (a as TaskRecord & { orderIndex?: number }).orderIndex ?? 0;
+        const bi = (b as TaskRecord & { orderIndex?: number }).orderIndex ?? 0;
+        if (ai !== bi) return ai - bi;
+        return (a.createdAt ?? '').localeCompare(b.createdAt ?? '');
+      });
+  }, [tasks, task.id]);
+
   const completed = subs.filter((s) => s.status === 'completed').length;
   const pct = subs.length === 0 ? 0 : Math.round((completed / subs.length) * 100);
 
@@ -34,6 +53,33 @@ export default function SubtasksPanel({ task }: { task: TaskRecord }) {
     });
     setTitle('');
     toast.success(t('subtasks.add') + ' ✓');
+  }
+
+  function handleDragStart(e: DragEvent<HTMLLIElement>, id: string) {
+    setDraggingId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  }
+
+  function handleDrop(e: DragEvent<HTMLLIElement>, dropId: string) {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain') || draggingId;
+    if (!sourceId || sourceId === dropId) return;
+    const ids = subs.map((s) => s.id);
+    const from = ids.indexOf(sourceId);
+    const to = ids.indexOf(dropId);
+    if (from === -1 || to === -1) return;
+    const reordered = [...ids];
+    reordered.splice(from, 1);
+    reordered.splice(to, 0, sourceId);
+    // Optimistically push the new orderIndex onto each subtask.
+    reordered.forEach((id, idx) => {
+      updateTask(id, { orderIndex: idx } as Partial<TaskRecord> & { orderIndex: number });
+    });
+    if (remoteMode) {
+      api.put(`/api/tasks/${task.id}/subtasks/order`, { ids: reordered }).catch(() => null);
+    }
+    setDraggingId(null);
   }
 
   return (
@@ -68,17 +114,20 @@ export default function SubtasksPanel({ task }: { task: TaskRecord }) {
       ) : (
         <ul className="divide-y divide-slate-100">
           {subs.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 py-2.5">
-              <input
-                type="checkbox"
-                checked={s.status === 'completed'}
-                onChange={(e) => {
-                  // Toggle a tiny in-place check; uses internal updateTask via separate handler on the page.
-                  s.status = e.target.checked ? 'completed' : 'planned';
-                }}
-                aria-hidden
-                className="hidden"
-              />
+            <li
+              key={s.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, s.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, s.id)}
+              onDragEnd={() => setDraggingId(null)}
+              className={`flex items-center gap-2 py-2.5 transition ${
+                draggingId === s.id ? 'opacity-50' : ''
+              }`}
+            >
+              <span className="cursor-grab text-slate-300 hover:text-slate-600" aria-label="drag">
+                <GripVertical size={14} />
+              </span>
               <Link to={`/app/tasks/item/${s.id}`} className="flex-1 min-w-0">
                 <div className="font-semibold text-slate-800 truncate">{s.title}</div>
                 <div className="mt-0.5">

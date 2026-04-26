@@ -13,6 +13,7 @@ import TasksBoard from './pages/TasksBoard';
 import TaskDetail from './pages/TaskDetail';
 import ReportsPage from './pages/Reports';
 import CalendarPage from './pages/Calendar';
+import ActivityPage from './pages/Activity';
 import AdminPage from './pages/Admin';
 import SettingsPage from './pages/Settings';
 import NotFoundPage from './pages/NotFound';
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="tasks/:tab" element={<TasksPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="activity" element={<ActivityPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

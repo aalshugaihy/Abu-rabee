@@ -299,6 +299,7 @@ export const translations = {
     'auth.failed': 'البريد أو كلمة المرور غير صحيحة',
     'auth.demo': 'حسابات تجريبية',
     'auth.role': 'الصلاحية',
+    'auth.rememberMe': 'تذكّرني (30 يوماً)',
     'auth.role.admin': 'مدير',
     'auth.role.staff': 'موظف',
     'auth.role.viewer': 'قارئ',
@@ -316,6 +317,26 @@ export const translations = {
     'realtime.connected': 'حي',
     'realtime.disconnected': 'غير متصل',
     'realtime.refreshed': 'تم استلام تحديث',
+
+    // Activity page
+    'nav.activity': 'سجل النشاط',
+    'activity.title': 'سجل النشاط',
+    'activity.subtitle': 'كل التغييرات على الكيانات في المنصة',
+    'activity.field.entity': 'الكيان',
+    'activity.field.action': 'الإجراء',
+    'activity.field.user': 'المستخدم',
+    'activity.field.id': 'المعرف',
+    'activity.field.label': 'الوصف',
+    'activity.field.at': 'الوقت',
+    'activity.next': 'التالي',
+    'activity.prev': 'السابق',
+
+    // Saved views
+    'views.title': 'المرشحات المحفوظة',
+    'views.save': 'حفظ كمرشح',
+    'views.namePlaceholder': 'اسم المرشح',
+    'views.empty': 'لا توجد مرشحات محفوظة',
+    'views.apply': 'تطبيق',
 
     // PDF
     'action.pdf': 'تنزيل PDF',
@@ -662,6 +683,7 @@ export const translations = {
     'auth.failed': 'Invalid email or password',
     'auth.demo': 'Demo accounts',
     'auth.role': 'Role',
+    'auth.rememberMe': 'Remember me (30 days)',
     'auth.role.admin': 'Admin',
     'auth.role.staff': 'Staff',
     'auth.role.viewer': 'Viewer',
@@ -679,6 +701,26 @@ export const translations = {
     'realtime.connected': 'live',
     'realtime.disconnected': 'offline',
     'realtime.refreshed': 'Update received',
+
+    // Activity page
+    'nav.activity': 'Activity log',
+    'activity.title': 'Activity log',
+    'activity.subtitle': 'All entity changes across the platform',
+    'activity.field.entity': 'Entity',
+    'activity.field.action': 'Action',
+    'activity.field.user': 'User',
+    'activity.field.id': 'ID',
+    'activity.field.label': 'Label',
+    'activity.field.at': 'At',
+    'activity.next': 'Next',
+    'activity.prev': 'Previous',
+
+    // Saved views
+    'views.title': 'Saved filters',
+    'views.save': 'Save current filters',
+    'views.namePlaceholder': 'Filter name',
+    'views.empty': 'No saved filters yet',
+    'views.apply': 'Apply',
 
     // PDF
     'action.pdf': 'Download PDF',

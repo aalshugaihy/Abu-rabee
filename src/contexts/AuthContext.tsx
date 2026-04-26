@@ -6,8 +6,8 @@ type AuthState = {
   ready: boolean;
   apiAvailable: boolean;
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (input: { email: string; password: string; name: string }) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (input: { email: string; password: string; name: string; rememberMe?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (...roles: Role[]) => boolean;
   canWrite: boolean;
@@ -41,15 +41,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const u = await api.post<AuthUser>('/api/auth/login', { email, password });
+  const login = useCallback(async (email: string, password: string, rememberMe = false) => {
+    const u = await api.post<AuthUser>('/api/auth/login', { email, password, rememberMe });
     setUser(u);
   }, []);
 
-  const register = useCallback(async (input: { email: string; password: string; name: string }) => {
-    const u = await api.post<AuthUser>('/api/auth/register', input);
-    setUser(u);
-  }, []);
+  const register = useCallback(
+    async (input: { email: string; password: string; name: string; rememberMe?: boolean }) => {
+      const u = await api.post<AuthUser>('/api/auth/register', input);
+      setUser(u);
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
     if (apiAvailable) {

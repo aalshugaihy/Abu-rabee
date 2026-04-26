@@ -9,6 +9,7 @@ import { matchLabel } from '../lib/match';
 import CsvImportButton from '../components/CsvImportButton';
 import BulkBar from '../components/BulkBar';
 import MultiSelect from '../components/MultiSelect';
+import SavedViews from '../components/SavedViews';
 import {
   RequestRecord,
   RequestClassification,
@@ -54,7 +55,9 @@ export default function RequestsPage() {
   const toast = useToast();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequestStatus[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<'all' | RequestPriority>('all');
+  const [priorityFilter, setPriorityFilter] = useState<RequestPriority[]>([]);
+  const [deptFilter, setDeptFilter] = useState<DepartmentKey[]>([]);
+  const [sectorFilter, setSectorFilter] = useState<SectorKey[]>([]);
   const [editing, setEditing] = useState<RequestRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -111,7 +114,9 @@ export default function RequestsPage() {
   const filtered = useMemo(() => {
     return requests.filter((r) => {
       if (statusFilter.length > 0 && !statusFilter.includes(r.status)) return false;
-      if (priorityFilter !== 'all' && r.priority !== priorityFilter) return false;
+      if (priorityFilter.length > 0 && (!r.priority || !priorityFilter.includes(r.priority))) return false;
+      if (deptFilter.length > 0 && (!r.department || !deptFilter.includes(r.department))) return false;
+      if (sectorFilter.length > 0 && (!r.sector || !sectorFilter.includes(r.sector))) return false;
       if (dateFrom && (!r.date || r.date < dateFrom)) return false;
       if (dateTo && (!r.date || r.date > dateTo)) return false;
       if (query) {
@@ -121,7 +126,31 @@ export default function RequestsPage() {
       }
       return true;
     });
-  }, [requests, statusFilter, priorityFilter, dateFrom, dateTo, query]);
+  }, [requests, statusFilter, priorityFilter, deptFilter, sectorFilter, dateFrom, dateTo, query]);
+
+  // Snapshot of the active filter state — used by SavedViews when persisting.
+  const filterState = useMemo(
+    () => ({
+      query,
+      status: statusFilter,
+      priority: priorityFilter,
+      department: deptFilter,
+      sector: sectorFilter,
+      from: dateFrom,
+      to: dateTo,
+    }),
+    [query, statusFilter, priorityFilter, deptFilter, sectorFilter, dateFrom, dateTo]
+  );
+
+  function applyView(f: typeof filterState) {
+    setQuery(f.query ?? '');
+    setStatusFilter(f.status ?? []);
+    setPriorityFilter(f.priority ?? []);
+    setDeptFilter(f.department ?? []);
+    setSectorFilter(f.sector ?? []);
+    setDateFrom(f.from ?? '');
+    setDateTo(f.to ?? '');
+  }
 
   return (
     <div>
@@ -183,27 +212,31 @@ export default function RequestsPage() {
             onChange={setStatusFilter}
             placeholder={t('requests.field.status')}
           />
-          <select className="select" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as never)}>
-            <option value="all">{t('common.all')} — {t('requests.field.priority')}</option>
-            {PRIORITIES.map((s) => (<option key={s} value={s}>{tReqPriority(t, s)}</option>))}
-          </select>
+          <MultiSelect<RequestPriority>
+            options={PRIORITIES.map((s) => ({ value: s, label: tReqPriority(t, s) }))}
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            placeholder={t('requests.field.priority')}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">{t('filter.dateFrom')}</label>
-            <input type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">{t('filter.dateTo')}</label>
-            <input type="date" className="input" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </div>
-          {(dateFrom || dateTo) && (
-            <div className="flex items-end">
-              <button type="button" className="btn-ghost" onClick={() => { setDateFrom(''); setDateTo(''); }}>
-                {t('bulk.clear')}
-              </button>
-            </div>
-          )}
+          <MultiSelect<DepartmentKey>
+            options={DEPTS.map((d) => ({ value: d, label: tDept(t, d) }))}
+            value={deptFilter}
+            onChange={setDeptFilter}
+            placeholder={t('committees.field.department')}
+          />
+          <MultiSelect<SectorKey>
+            options={SECTORS.map((s) => ({ value: s, label: tSector(t, s) }))}
+            value={sectorFilter}
+            onChange={setSectorFilter}
+            placeholder={t('requests.field.sector')}
+          />
+          <input type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label={t('filter.dateFrom')} />
+          <input type="date" className="input" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label={t('filter.dateTo')} />
+        </div>
+        <div className="mt-3 flex items-center justify-end">
+          <SavedViews<typeof filterState> page="requests" current={filterState} onApply={applyView} />
         </div>
       </div>
 

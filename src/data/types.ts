@@ -89,6 +89,7 @@ export interface TaskRecord {
   nextRun?: string;
   progress: number;
   parentTaskId?: string;
+  orderIndex?: number;
   createdAt?: string;
   updatedAt?: string;
 }

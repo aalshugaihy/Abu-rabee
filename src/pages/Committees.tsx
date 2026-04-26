@@ -11,6 +11,8 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import CsvImportButton from '../components/CsvImportButton';
 import BulkBar from '../components/BulkBar';
+import MultiSelect from '../components/MultiSelect';
+import SavedViews from '../components/SavedViews';
 import { committeeName, statusToTone, tCommitteeScope, tCommitteeType, tDept, tStatus } from '../lib/format';
 import { downloadCsv, toCsv } from '../lib/csv';
 import { matchLabel } from '../lib/match';
@@ -27,8 +29,9 @@ export default function CommitteesPage() {
   const { committees, addCommittee, updateCommittee, removeCommittee } = useData();
   const toast = useToast();
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | CommitteeStatus>('all');
-  const [deptFilter, setDeptFilter] = useState<'all' | DepartmentKey>('all');
+  const [statusFilter, setStatusFilter] = useState<CommitteeStatus[]>([]);
+  const [deptFilter, setDeptFilter] = useState<DepartmentKey[]>([]);
+  const [scopeFilter, setScopeFilter] = useState<CommitteeScope[]>([]);
   const [editing, setEditing] = useState<Committee | null>(null);
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -78,8 +81,9 @@ export default function CommitteesPage() {
 
   const filtered = useMemo(() => {
     return committees.filter((c) => {
-      if (statusFilter !== 'all' && c.status !== statusFilter) return false;
-      if (deptFilter !== 'all' && c.department !== deptFilter) return false;
+      if (statusFilter.length > 0 && !statusFilter.includes(c.status)) return false;
+      if (deptFilter.length > 0 && (!c.department || !deptFilter.includes(c.department))) return false;
+      if (scopeFilter.length > 0 && !scopeFilter.includes(c.scope)) return false;
       if (query) {
         const q = query.toLowerCase();
         const blob = `${c.name} ${c.nameEn ?? ''} ${c.representative ?? ''} ${c.head ?? ''} ${c.organizer ?? ''}`.toLowerCase();
@@ -87,7 +91,19 @@ export default function CommitteesPage() {
       }
       return true;
     });
-  }, [committees, statusFilter, deptFilter, query]);
+  }, [committees, statusFilter, deptFilter, scopeFilter, query]);
+
+  const filterState = useMemo(
+    () => ({ query, status: statusFilter, department: deptFilter, scope: scopeFilter }),
+    [query, statusFilter, deptFilter, scopeFilter]
+  );
+
+  function applyView(f: typeof filterState) {
+    setQuery(f.query ?? '');
+    setStatusFilter(f.status ?? []);
+    setDeptFilter(f.department ?? []);
+    setScopeFilter(f.scope ?? []);
+  }
 
   return (
     <div>
@@ -137,21 +153,32 @@ export default function CommitteesPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('action.search')}
-              className="input pl-10 ps-10"
+              className="input ps-10"
             />
           </div>
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as never)}>
-            <option value="all">{t('common.all')} — {t('committees.field.status')}</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{tStatus(t, s)}</option>
-            ))}
-          </select>
-          <select className="select" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value as never)}>
-            <option value="all">{t('common.all')} — {t('committees.field.department')}</option>
-            {DEPTS.map((d) => (
-              <option key={d} value={d}>{tDept(t, d)}</option>
-            ))}
-          </select>
+          <MultiSelect<CommitteeStatus>
+            options={STATUSES.map((s) => ({ value: s, label: tStatus(t, s) }))}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder={t('committees.field.status')}
+          />
+          <MultiSelect<DepartmentKey>
+            options={DEPTS.map((d) => ({ value: d, label: tDept(t, d) }))}
+            value={deptFilter}
+            onChange={setDeptFilter}
+            placeholder={t('committees.field.department')}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <MultiSelect<CommitteeScope>
+            options={SCOPES.map((s) => ({ value: s, label: tCommitteeScope(t, s) }))}
+            value={scopeFilter}
+            onChange={setScopeFilter}
+            placeholder={t('committees.field.scope')}
+          />
+          <div className="md:col-span-3 flex items-center justify-end">
+            <SavedViews<typeof filterState> page="committees" current={filterState} onApply={applyView} />
+          </div>
         </div>
       </div>
 
