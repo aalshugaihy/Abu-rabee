@@ -1,7 +1,9 @@
-import { Printer } from 'lucide-react';
+import { useRef } from 'react';
+import { FileDown, Printer } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import PageHeader from '../components/PageHeader';
+import { printElementAsPdf } from '../lib/pdf';
 import { BarChart, DonutChart } from '../components/Charts';
 import {
   statusToTone,
@@ -20,6 +22,7 @@ import {
 export default function ReportsPage() {
   const { t } = useLanguage();
   const { committees, requests, tasks } = useData();
+  const printRef = useRef<HTMLDivElement>(null);
 
   const cmtStatusOrder: CommitteeStatus[] = ['active', 'forming', 'frozen', 'closed'];
   const reqStatusOrder: RequestStatus[] = ['new', 'inProgress', 'completed', 'late', 'onTime', 'followUp'];
@@ -89,11 +92,22 @@ export default function ReportsPage() {
         title={t('service.reports.title')}
         subtitle={t('service.reports.desc')}
         actions={
-          <button type="button" className="btn-secondary print:hidden" onClick={() => window.print()}>
-            <Printer size={16} /> {t('action.print')}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn-ghost print:hidden"
+              onClick={() => printRef.current && printElementAsPdf(printRef.current, t('service.reports.title'))}
+            >
+              <FileDown size={16} /> {t('action.pdf')}
+            </button>
+            <button type="button" className="btn-secondary print:hidden" onClick={() => window.print()}>
+              <Printer size={16} /> {t('action.print')}
+            </button>
+          </div>
         }
       />
+
+      <div ref={printRef}>
 
       {/* Top KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -127,6 +141,7 @@ export default function ReportsPage() {
         <ReportCard title={`${t('tasks.title')} — ${t('tasks.field.kind')}`}>
           <DonutChart data={taskByKind} centerLabel={t('common.total')} />
         </ReportCard>
+      </div>
       </div>
     </div>
   );

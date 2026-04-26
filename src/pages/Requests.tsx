@@ -58,6 +58,8 @@ export default function RequestsPage() {
   const [editing, setEditing] = useState<RequestRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
@@ -110,6 +112,8 @@ export default function RequestsPage() {
     return requests.filter((r) => {
       if (statusFilter.length > 0 && !statusFilter.includes(r.status)) return false;
       if (priorityFilter !== 'all' && r.priority !== priorityFilter) return false;
+      if (dateFrom && (!r.date || r.date < dateFrom)) return false;
+      if (dateTo && (!r.date || r.date > dateTo)) return false;
       if (query) {
         const q = query.toLowerCase();
         const blob = `${r.id} ${r.name} ${r.requester ?? ''} ${r.txnName ?? ''}`.toLowerCase();
@@ -117,7 +121,7 @@ export default function RequestsPage() {
       }
       return true;
     });
-  }, [requests, statusFilter, priorityFilter, query]);
+  }, [requests, statusFilter, priorityFilter, dateFrom, dateTo, query]);
 
   return (
     <div>
@@ -183,6 +187,23 @@ export default function RequestsPage() {
             <option value="all">{t('common.all')} — {t('requests.field.priority')}</option>
             {PRIORITIES.map((s) => (<option key={s} value={s}>{tReqPriority(t, s)}</option>))}
           </select>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">{t('filter.dateFrom')}</label>
+            <input type="date" className="input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">{t('filter.dateTo')}</label>
+            <input type="date" className="input" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+          {(dateFrom || dateTo) && (
+            <div className="flex items-end">
+              <button type="button" className="btn-ghost" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                {t('bulk.clear')}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

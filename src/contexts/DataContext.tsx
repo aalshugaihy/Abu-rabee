@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { ActivityAction, ActivityEntity, ActivityLog, Comment, Committee, RequestRecord, TaskRecord } from '../data/types';
+import { ActivityAction, ActivityEntity, ActivityLog, Comment, Committee, RequestRecord, TaskDependency, TaskRecord } from '../data/types';
 import { seedCommittees, seedRequests, seedTasks } from '../data/seed';
 
 type DataContextValue = {
@@ -19,6 +19,9 @@ type DataContextValue = {
   removeTask: (id: string) => void;
   addComment: (c: Omit<Comment, 'id' | 'at'>) => void;
   removeComment: (id: string) => void;
+  dependencies: TaskDependency[];
+  addDependency: (taskId: string, dependsOnId: string) => { ok: true } | { ok: false; reason: 'cycle' | 'self' | 'duplicate' };
+  removeDependency: (id: string) => void;
   resetAll: () => void;
 };
 
@@ -30,6 +33,7 @@ const STORAGE_KEYS = {
   tasks: 'abu-rabee.tasks',
   activity: 'abu-rabee.activity',
   comments: 'abu-rabee.comments',
+  dependencies: 'abu-rabee.dependencies',
 } as const;
 
 const ACTIVITY_LIMIT = 200;
@@ -71,12 +75,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<TaskRecord[]>(() => load(STORAGE_KEYS.tasks, seedTasks));
   const [activity, setActivity] = useState<ActivityLog[]>(() => load(STORAGE_KEYS.activity, [] as ActivityLog[]));
   const [comments, setComments] = useState<Comment[]>(() => load(STORAGE_KEYS.comments, [] as Comment[]));
+  const [dependencies, setDependencies] = useState<TaskDependency[]>(() => load(STORAGE_KEYS.dependencies, [] as TaskDependency[]));
 
   useEffect(() => save(STORAGE_KEYS.committees, committees), [committees]);
   useEffect(() => save(STORAGE_KEYS.requests, requests), [requests]);
   useEffect(() => save(STORAGE_KEYS.tasks, tasks), [tasks]);
   useEffect(() => save(STORAGE_KEYS.activity, activity), [activity]);
   useEffect(() => save(STORAGE_KEYS.comments, comments), [comments]);
+  useEffect(() => save(STORAGE_KEYS.dependencies, dependencies), [dependencies]);
 
   const log = useCallback((entity: ActivityEntity, action: ActivityAction, entityId: string, label?: string) => {
     setActivity((prev) => {
@@ -213,12 +219,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setComments((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const addDependency = useCallback(
+    (taskId: string, dependsOnId: string) => {
+      if (taskId === dependsOnId) return { ok: false, reason: 'self' as const };
+      // Cycle check via DFS over the existing dependency graph.
+      const adjacency = new Map<string, string[]>();
+      for (const d of dependencies) {
+        if (!adjacency.has(d.taskId)) adjacency.set(d.taskId, []);
+        adjacency.get(d.taskId)!.push(d.dependsOnId);
+      }
+      function leadsTo(start: string, target: string, seen = new Set<string>()): boolean {
+        if (start === target) return true;
+        if (seen.has(start)) return false;
+        seen.add(start);
+        for (const next of adjacency.get(start) ?? []) {
+          if (leadsTo(next, target, seen)) return true;
+        }
+        return false;
+      }
+      if (leadsTo(dependsOnId, taskId)) return { ok: false, reason: 'cycle' as const };
+      const exists = dependencies.some((d) => d.taskId === taskId && d.dependsOnId === dependsOnId);
+      if (exists) return { ok: false, reason: 'duplicate' as const };
+      const id = `DEP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      setDependencies((prev) => [{ id, taskId, dependsOnId }, ...prev]);
+      return { ok: true as const };
+    },
+    [dependencies]
+  );
+
+  const removeDependency = useCallback((id: string) => {
+    setDependencies((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
   const resetAll = useCallback(() => {
     setCommittees(seedCommittees);
     setRequests(seedRequests);
     setTasks(seedTasks);
     setActivity([]);
     setComments([]);
+    setDependencies([]);
   }, []);
 
   const value = useMemo(
@@ -228,6 +267,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       tasks,
       activity,
       comments,
+      dependencies,
       addCommittee,
       updateCommittee,
       removeCommittee,
@@ -239,6 +279,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeTask,
       addComment,
       removeComment,
+      addDependency,
+      removeDependency,
       resetAll,
     }),
     [
@@ -247,6 +289,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       tasks,
       activity,
       comments,
+      dependencies,
       addCommittee,
       updateCommittee,
       removeCommittee,
@@ -258,6 +301,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeTask,
       addComment,
       removeComment,
+      addDependency,
+      removeDependency,
       resetAll,
     ]
   );

@@ -88,8 +88,24 @@ export interface TaskRecord {
   lastRun?: string;
   nextRun?: string;
   progress: number;
+  parentTaskId?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface TaskDependency {
+  id: string;
+  taskId: string;
+  dependsOnId: string;
+}
+
+export type Role = 'admin' | 'staff' | 'viewer';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
 }
 
 export type ActivityEntity = 'committee' | 'request' | 'task';

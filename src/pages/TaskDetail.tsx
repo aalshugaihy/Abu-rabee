@@ -6,6 +6,8 @@ import { useToast } from '../contexts/ToastContext';
 import StatusBadge from '../components/StatusBadge';
 import ActivityFeed from '../components/ActivityFeed';
 import CommentsThread from '../components/CommentsThread';
+import SubtasksPanel from '../components/SubtasksPanel';
+import DependenciesPanel from '../components/DependenciesPanel';
 import {
   committeeName,
   priorityToTone,
@@ -120,6 +122,16 @@ export default function TaskDetail() {
               </Link>
             </div>
           )}
+
+          <div className="card p-6">
+            <h2 className="text-base font-bold text-slate-900 mb-4">{t('subtasks.title')}</h2>
+            <SubtasksPanel task={task} />
+          </div>
+
+          <div className="card p-6">
+            <h2 className="text-base font-bold text-slate-900 mb-4">{t('deps.title')}</h2>
+            <DependenciesPanel taskId={task.id} />
+          </div>
 
           <div className="card p-6">
             <h2 className="text-base font-bold text-slate-900 mb-4">{t('detail.comments')}</h2>

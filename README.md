@@ -15,26 +15,55 @@ The dashboard exposes a services panel (rendered on the right side in Arabic / R
    - **Team / workgroup task** (committee or team-specific tasks)
 4. **Reports & Statistics** — KPIs, status & department breakdowns and compliance ratios.
 
+## Architecture
+
+The repo is a small monorepo of two packages:
+
+- **`/` (frontend)** — Vite + React 18 + TypeScript SPA. Works **offline** by
+  default, persisting to `localStorage`. If `VITE_API_URL` is set at build
+  time, it talks to the backend instead and adds login + roles + realtime.
+- **`server/`** — Express + Prisma + SQLite + Socket.io API with JWT cookie
+  auth and three roles (`admin` / `staff` / `viewer`). See
+  [`server/README.md`](./server/README.md) for setup.
+
 ## Tech stack
 
 - Vite + React 18 + TypeScript (strict)
 - Tailwind CSS (custom brand palette + RTL/LTR aware utilities)
-- React Router 6
-- Lucide React icons
-- LocalStorage persistence (no backend required)
+- React Router 6, Lucide icons, Socket.io-client (lazy-loaded)
 - Bilingual i18n (Arabic / English) with automatic RTL/LTR direction switching
+- LocalStorage persistence by default; opt-in REST + websocket backend
 
 ## Quick start (development)
+
+**Frontend only — localStorage mode (offline):**
 
 ```bash
 npm install
 npm run dev          # http://localhost:5173
 ```
 
+**With backend — multi-user, auth, realtime:**
+
+```bash
+# Terminal 1 — backend on :4000
+cd server
+cp .env.example .env
+npm install
+npx prisma generate
+npx prisma db push
+npm run seed         # demo users (admin/staff/viewer) + seed entities
+npm run dev
+
+# Terminal 2 — frontend pointed at the backend
+VITE_API_URL=http://localhost:4000 npm run dev
+```
+
 Other scripts:
 
 ```bash
 npm run typecheck    # tsc --noEmit
+npm run test         # vitest run
 npm run build        # production build → dist/
 npm run preview      # preview the production build on :4173
 ```

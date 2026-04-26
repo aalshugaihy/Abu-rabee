@@ -269,6 +269,52 @@ export const translations = {
     'activity.request': 'طلب',
     'activity.task': 'مهمة',
 
+    // Subtasks & dependencies
+    'subtasks.title': 'مهام فرعية',
+    'subtasks.empty': 'لا توجد مهام فرعية',
+    'subtasks.add': 'إضافة مهمة فرعية',
+    'subtasks.placeholder': 'عنوان المهمة الفرعية',
+    'subtasks.parent': 'مهمة رئيسية',
+    'deps.title': 'المتطلبات السابقة',
+    'deps.empty': 'لا توجد متطلبات سابقة',
+    'deps.add': 'إضافة متطلب',
+    'deps.cycle': 'لا يمكن إنشاء متطلب دائري',
+    'deps.duplicate': 'هذا المتطلب مضاف مسبقاً',
+    'deps.self': 'لا يمكن أن تعتمد المهمة على نفسها',
+    'deps.pickTask': 'اختر مهمة',
+
+    // Auth
+    'auth.login': 'تسجيل الدخول',
+    'auth.logout': 'تسجيل الخروج',
+    'auth.email': 'البريد الإلكتروني',
+    'auth.password': 'كلمة المرور',
+    'auth.name': 'الاسم',
+    'auth.signIn': 'دخول',
+    'auth.signOut': 'خروج',
+    'auth.failed': 'البريد أو كلمة المرور غير صحيحة',
+    'auth.demo': 'حسابات تجريبية',
+    'auth.role': 'الصلاحية',
+    'auth.role.admin': 'مدير',
+    'auth.role.staff': 'موظف',
+    'auth.role.viewer': 'قارئ',
+    'auth.required': 'الرجاء تسجيل الدخول للوصول إلى هذه الصفحة',
+    'auth.forbiddenWrite': 'صلاحية القراءة فقط',
+    'auth.workingOffline': 'يعمل التطبيق محلياً (بدون خادم)',
+    'auth.connectedTo': 'متصل بـ',
+
+    // Date filters
+    'filter.dateFrom': 'من تاريخ',
+    'filter.dateTo': 'إلى تاريخ',
+    'filter.dateRange': 'نطاق التواريخ',
+
+    // Realtime
+    'realtime.connected': 'حي',
+    'realtime.disconnected': 'غير متصل',
+    'realtime.refreshed': 'تم استلام تحديث',
+
+    // PDF
+    'action.pdf': 'تنزيل PDF',
+
     // Tasks board / status filter
     'nav.tasks.board': 'لوحة كانبان',
     'tasks.tab.board': 'لوحة كانبان (Kanban)',
@@ -580,6 +626,52 @@ export const translations = {
     'activity.committee': 'Committee',
     'activity.request': 'Request',
     'activity.task': 'Task',
+
+    // Subtasks & dependencies
+    'subtasks.title': 'Sub-tasks',
+    'subtasks.empty': 'No sub-tasks yet',
+    'subtasks.add': 'Add sub-task',
+    'subtasks.placeholder': 'Sub-task title',
+    'subtasks.parent': 'Parent task',
+    'deps.title': 'Prerequisites',
+    'deps.empty': 'No prerequisites',
+    'deps.add': 'Add prerequisite',
+    'deps.cycle': 'Cannot create a cyclic dependency',
+    'deps.duplicate': 'This prerequisite is already added',
+    'deps.self': 'A task cannot depend on itself',
+    'deps.pickTask': 'Pick a task',
+
+    // Auth
+    'auth.login': 'Sign in',
+    'auth.logout': 'Sign out',
+    'auth.email': 'Email',
+    'auth.password': 'Password',
+    'auth.name': 'Name',
+    'auth.signIn': 'Sign in',
+    'auth.signOut': 'Sign out',
+    'auth.failed': 'Invalid email or password',
+    'auth.demo': 'Demo accounts',
+    'auth.role': 'Role',
+    'auth.role.admin': 'Admin',
+    'auth.role.staff': 'Staff',
+    'auth.role.viewer': 'Viewer',
+    'auth.required': 'Please sign in to access this page',
+    'auth.forbiddenWrite': 'Read-only access',
+    'auth.workingOffline': 'Working offline (no server)',
+    'auth.connectedTo': 'Connected to',
+
+    // Date filters
+    'filter.dateFrom': 'From',
+    'filter.dateTo': 'To',
+    'filter.dateRange': 'Date range',
+
+    // Realtime
+    'realtime.connected': 'live',
+    'realtime.disconnected': 'offline',
+    'realtime.refreshed': 'Update received',
+
+    // PDF
+    'action.pdf': 'Download PDF',
 
     // Tasks board / status filter
     'nav.tasks.board': 'Kanban board',

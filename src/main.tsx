@@ -6,6 +6,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { DataProvider } from './contexts/DataContext';
 import { UIProvider } from './contexts/UIContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { AuthProvider } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
@@ -18,11 +19,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter basename={basename}>
         <LanguageProvider>
           <ToastProvider>
-            <UIProvider>
-              <DataProvider>
-                <App />
-              </DataProvider>
-            </UIProvider>
+            <AuthProvider>
+              <UIProvider>
+                <DataProvider>
+                  <App />
+                </DataProvider>
+              </UIProvider>
+            </AuthProvider>
           </ToastProvider>
         </LanguageProvider>
       </BrowserRouter>
