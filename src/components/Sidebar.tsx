@@ -12,6 +12,7 @@ import {
   Kanban,
   ShieldCheck,
   History,
+  UserCircle2,
   ChevronLeft,
   ChevronRight,
   X,
@@ -36,10 +37,12 @@ type Item = {
     | 'nav.reports'
     | 'nav.activity'
     | 'nav.admin'
+    | 'nav.profile'
     | 'nav.settings';
   icon: LucideIcon;
   end?: boolean;
   adminOnly?: boolean;
+  apiOnly?: boolean;
 };
 
 const items: Item[] = [
@@ -54,14 +57,21 @@ const items: Item[] = [
   { to: '/app/reports', labelKey: 'nav.reports', icon: BarChart3 },
   { to: '/app/activity', labelKey: 'nav.activity', icon: History },
   { to: '/app/admin', labelKey: 'nav.admin', icon: ShieldCheck, adminOnly: true },
+  { to: '/app/profile', labelKey: 'nav.profile', icon: UserCircle2, apiOnly: true },
   { to: '/app/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 function NavList({ collapsed, onItemClick }: { collapsed?: boolean; onItemClick?: () => void }) {
   const { t } = useLanguage();
   const { apiAvailable, hasRole } = useAuth();
-  // Admin-only entries are only visible when API mode is on AND the user is an admin.
-  const visible = items.filter((i) => !i.adminOnly || (apiAvailable && hasRole('admin')));
+  // Filter visibility per entry. Admin-only entries require API mode + admin role.
+  // apiOnly entries (e.g. profile) are hidden in offline mode where there's no
+  // user account to manage.
+  const visible = items.filter((i) => {
+    if (i.adminOnly && !(apiAvailable && hasRole('admin'))) return false;
+    if (i.apiOnly && !apiAvailable) return false;
+    return true;
+  });
   return (
     <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
       {visible.map(({ to, labelKey, icon: Icon, end }) => (

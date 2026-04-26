@@ -11,6 +11,7 @@ import commentsRoutes from './routes/comments.js';
 import activityRoutes from './routes/activity.js';
 import viewsRoutes from './routes/views.js';
 import { openApiSpec } from './openapi.js';
+import { prisma } from './db.js';
 
 /**
  * Build a fresh Express app with all routes mounted but without binding to
@@ -25,7 +26,19 @@ export function createApp(): express.Express {
   app.use(cookieParser());
   app.use(express.json({ limit: '1mb' }));
 
+  // Liveness probe — process is up. No DB hit so it can't fail on transient
+  // database hiccups.
   app.get('/health', (_req, res) => res.json({ ok: true, at: new Date().toISOString() }));
+
+  // Readiness probe — actually pings the DB. 503 if SQLite is unreachable.
+  app.get('/ready', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ ok: true, db: 'up', at: new Date().toISOString() });
+    } catch (err) {
+      res.status(503).json({ ok: false, db: 'down', error: (err as Error).message });
+    }
+  });
 
   app.use('/api/auth', authRoutes);
   app.use('/api/committees', committeesRoutes);

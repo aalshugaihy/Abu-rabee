@@ -166,7 +166,24 @@ export const openApiSpec = {
         summary: 'Current user',
         responses: { 200: { description: 'OK' }, 401: { description: 'Unauthenticated' } },
       },
+      patch: {
+        tags: ['Auth'],
+        security: [{ cookieAuth: [] }],
+        summary: 'Update display name',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string', minLength: 1 } } } } } },
+        responses: { 200: { description: 'OK' }, 400: { description: 'Invalid input' } },
+      },
     },
+    '/api/auth/change-password': {
+      post: {
+        tags: ['Auth'],
+        security: [{ cookieAuth: [] }],
+        summary: 'Change own password (revokes other sessions)',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['currentPassword', 'newPassword'], properties: { currentPassword: { type: 'string' }, newPassword: { type: 'string', minLength: 8 } } } } } },
+        responses: { 200: { description: 'OK' }, 401: { description: 'invalid_password' } },
+      },
+    },
+    '/ready': { get: { tags: ['Meta'], summary: 'Readiness probe (checks DB)', responses: { 200: { description: 'OK' }, 503: { description: 'DB down' } } } },
     '/api/auth/users': {
       get: {
         tags: ['Auth', 'Admin'],

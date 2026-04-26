@@ -58,3 +58,37 @@ GET    /api/activity?entity=task&entityId=TSK-...
 
 Realtime: clients connect to the same origin via Socket.io and listen
 for `data:changed` events `{ entity, action, at }` to refetch.
+
+## Backup & restore
+
+Two helper scripts ship in `scripts/` for the SQLite database. `backup.sh`
+uses SQLite's `VACUUM INTO` so it produces a consistent snapshot without
+locking writers for long, and rotates backups (keeps the last 14):
+
+```bash
+# Backup
+./scripts/backup.sh
+# → wrote backups/abu-rabee-20260426T120000Z.db (96 KB)
+
+# Restore (the current DB is moved aside to .replaced-<stamp>)
+./scripts/restore.sh backups/abu-rabee-20260426T120000Z.db
+```
+
+Both scripts honour `DB_PATH` (default `prisma/dev.db`) and `BACKUP_DIR`
+(default `backups`).
+
+## Health endpoints
+
+- `GET /health` — liveness, no DB hit. Always 200 if the process is up.
+- `GET /ready` — readiness, runs `SELECT 1` against SQLite. Returns 503
+  with `db: down` if the database is unreachable.
+
+## Security
+
+- Auth endpoints (`/login`, `/register`, `/refresh`) are rate-limited
+  (10 req/min per IP per route, 30/min for refresh).
+- Login attempts (success and failure) are recorded in the activity log
+  under entity `user` with action `login` / `login_failed` / `logout`.
+- Passwords are bcrypt-hashed (cost 10) and refresh tokens are stored
+  as SHA-256 hashes — a leaked DB row alone cannot replay a session.
+- Changing the password revokes every other refresh token immediately.

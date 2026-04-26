@@ -15,6 +15,7 @@ import ReportsPage from './pages/Reports';
 import CalendarPage from './pages/Calendar';
 import ActivityPage from './pages/Activity';
 import AdminPage from './pages/Admin';
+import ProfilePage from './pages/Profile';
 import SettingsPage from './pages/Settings';
 import NotFoundPage from './pages/NotFound';
 
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       </Route>
