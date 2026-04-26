@@ -116,3 +116,28 @@
     text-wrap: balance;
   }
 }
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  body, .card {
+    box-shadow: none !important;
+  }
+  aside,
+  .print\:hidden {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #e2e8f0 !important;
+  }
+  a {
+    color: #1f352c !important;
+    text-decoration: none !important;
+  }
+}

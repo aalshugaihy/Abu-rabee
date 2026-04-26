@@ -36,6 +36,7 @@ export const translations = {
     'action.search': 'بحث',
     'action.filter': 'تصفية',
     'action.export': 'تصدير',
+    'action.print': 'طباعة',
     'action.viewAll': 'عرض الكل',
     'action.confirm': 'تأكيد',
     'action.confirmDelete': 'هل أنت متأكد من الحذف؟',
@@ -232,6 +233,15 @@ export const translations = {
     'common.optional': 'اختياري',
     'common.yes': 'نعم',
     'common.no': 'لا',
+
+    // Notifications
+    'notif.title': 'الإشعارات',
+    'notif.empty': 'لا توجد إشعارات جديدة',
+    'notif.overdueTask': 'مهمة متأخرة',
+    'notif.dueSoon': 'تستحق قريباً',
+    'notif.followUp': 'يحتاج متابعة',
+    'notif.newRequest': 'طلب جديد',
+    'notif.viewAll': 'عرض كل التنبيهات',
   },
 
   en: {
@@ -267,6 +277,7 @@ export const translations = {
     'action.search': 'Search',
     'action.filter': 'Filter',
     'action.export': 'Export',
+    'action.print': 'Print',
     'action.viewAll': 'View all',
     'action.confirm': 'Confirm',
     'action.confirmDelete': 'Are you sure you want to delete?',
@@ -463,5 +474,14 @@ export const translations = {
     'common.optional': 'Optional',
     'common.yes': 'Yes',
     'common.no': 'No',
+
+    // Notifications
+    'notif.title': 'Notifications',
+    'notif.empty': 'No new notifications',
+    'notif.overdueTask': 'Overdue task',
+    'notif.dueSoon': 'Due soon',
+    'notif.followUp': 'Needs follow-up',
+    'notif.newRequest': 'New request',
+    'notif.viewAll': 'View all alerts',
   },
 } as const;

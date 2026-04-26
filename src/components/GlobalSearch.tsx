@@ -16,6 +16,7 @@ export default function GlobalSearch() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -23,7 +24,17 @@ export default function GlobalSearch() {
       if (!wrapperRef.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
+      // Ctrl/Cmd + K → focus search
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        setOpen(true);
+      }
     }
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
@@ -90,6 +101,7 @@ export default function GlobalSearch() {
     <div ref={wrapperRef} className="relative w-full">
       <Search size={16} className="absolute top-1/2 -translate-y-1/2 start-3 text-slate-400 pointer-events-none" />
       <input
+        ref={inputRef}
         type="search"
         value={q}
         onChange={(e) => {
@@ -98,8 +110,17 @@ export default function GlobalSearch() {
         }}
         onFocus={() => setOpen(true)}
         placeholder={t('action.search')}
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 ps-10 pe-9 py-2.5 text-sm focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 outline-none"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50 ps-10 pe-16 py-2.5 text-sm focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 outline-none"
+        aria-label={t('action.search')}
       />
+      {!q && (
+        <kbd
+          className="hidden md:inline-flex absolute top-1/2 -translate-y-1/2 end-2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-500 pointer-events-none"
+          aria-hidden
+        >
+          ⌘K
+        </kbd>
+      )}
       {q && (
         <button
           type="button"
