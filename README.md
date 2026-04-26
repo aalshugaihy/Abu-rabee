@@ -114,6 +114,9 @@ and the server runs `prisma db push` automatically on first start.
 
 ### Option D — One-click deploy to Render
 
+> 📘 **For a step-by-step guide in Arabic + English with troubleshooting,
+> see [`RENDER_DEPLOY.md`](./RENDER_DEPLOY.md).**
+
 The repo ships a top-level `render.yaml` blueprint that provisions all three
 moving parts in a single deploy:
 

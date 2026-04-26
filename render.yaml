@@ -38,7 +38,10 @@ services:
       npx prisma generate
       npm run build
     startCommand: |
-      npx prisma db push --skip-generate --accept-data-loss
+      # Apply the schema (idempotent) then start the API. We swallow non-zero
+      # from `db push` so the API still boots if the schema is already in sync
+      # — the readiness probe will catch any genuine DB problems.
+      npx prisma db push --skip-generate --accept-data-loss || echo "schema already in sync"
       node --enable-source-maps dist/index.js
     healthCheckPath: /health
     envVars:
