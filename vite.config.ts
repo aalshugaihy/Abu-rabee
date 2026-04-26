@@ -22,5 +22,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // The `server/` workspace has its own vitest config and Prisma-backed
+    // tests; do not pull them into the frontend test run.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['server/**', 'node_modules/**', 'dist/**'],
   },
 });

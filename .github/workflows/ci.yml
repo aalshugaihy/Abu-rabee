@@ -44,6 +44,10 @@ jobs:
         working-directory: server
         run: npm run typecheck
 
+      - name: Test (server)
+        working-directory: server
+        run: npm test
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:

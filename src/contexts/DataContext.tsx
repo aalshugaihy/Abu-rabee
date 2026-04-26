@@ -1,6 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { ActivityAction, ActivityEntity, ActivityLog, Comment, Committee, RequestRecord, TaskDependency, TaskRecord } from '../data/types';
 import { seedCommittees, seedRequests, seedTasks } from '../data/seed';
+import { api, apiAvailable } from '../lib/api';
+import { getSocket } from '../lib/socket';
+import { useAuth } from './AuthContext';
 
 type DataContextValue = {
   committees: Committee[];
@@ -8,6 +11,7 @@ type DataContextValue = {
   tasks: TaskRecord[];
   activity: ActivityLog[];
   comments: Comment[];
+  dependencies: TaskDependency[];
   addCommittee: (c: Omit<Committee, 'id'> & { id?: string }) => void;
   updateCommittee: (id: string, patch: Partial<Committee>) => void;
   removeCommittee: (id: string) => void;
@@ -19,9 +23,9 @@ type DataContextValue = {
   removeTask: (id: string) => void;
   addComment: (c: Omit<Comment, 'id' | 'at'>) => void;
   removeComment: (id: string) => void;
-  dependencies: TaskDependency[];
   addDependency: (taskId: string, dependsOnId: string) => { ok: true } | { ok: false; reason: 'cycle' | 'self' | 'duplicate' };
   removeDependency: (id: string) => void;
+  remoteMode: boolean;
   resetAll: () => void;
 };
 
@@ -70,159 +74,339 @@ function newActivityId(): string {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  // Remote mode = API is configured AND user is signed in. Otherwise we stay
+  // on the existing localStorage-backed flow that ships with the app.
+  const remoteMode = apiAvailable && !!user;
+
   const [committees, setCommittees] = useState<Committee[]>(() => load(STORAGE_KEYS.committees, seedCommittees));
   const [requests, setRequests] = useState<RequestRecord[]>(() => load(STORAGE_KEYS.requests, seedRequests));
   const [tasks, setTasks] = useState<TaskRecord[]>(() => load(STORAGE_KEYS.tasks, seedTasks));
   const [activity, setActivity] = useState<ActivityLog[]>(() => load(STORAGE_KEYS.activity, [] as ActivityLog[]));
   const [comments, setComments] = useState<Comment[]>(() => load(STORAGE_KEYS.comments, [] as Comment[]));
-  const [dependencies, setDependencies] = useState<TaskDependency[]>(() => load(STORAGE_KEYS.dependencies, [] as TaskDependency[]));
+  const [dependencies, setDependencies] = useState<TaskDependency[]>(() =>
+    load(STORAGE_KEYS.dependencies, [] as TaskDependency[])
+  );
 
-  useEffect(() => save(STORAGE_KEYS.committees, committees), [committees]);
-  useEffect(() => save(STORAGE_KEYS.requests, requests), [requests]);
-  useEffect(() => save(STORAGE_KEYS.tasks, tasks), [tasks]);
-  useEffect(() => save(STORAGE_KEYS.activity, activity), [activity]);
-  useEffect(() => save(STORAGE_KEYS.comments, comments), [comments]);
-  useEffect(() => save(STORAGE_KEYS.dependencies, dependencies), [dependencies]);
+  // Persist locally only when we are NOT in remote mode — in remote mode the
+  // server is the source of truth, and local cache would just become stale.
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.committees, committees);
+  }, [committees, remoteMode]);
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.requests, requests);
+  }, [requests, remoteMode]);
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.tasks, tasks);
+  }, [tasks, remoteMode]);
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.activity, activity);
+  }, [activity, remoteMode]);
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.comments, comments);
+  }, [comments, remoteMode]);
+  useEffect(() => {
+    if (!remoteMode) save(STORAGE_KEYS.dependencies, dependencies);
+  }, [dependencies, remoteMode]);
 
-  const log = useCallback((entity: ActivityEntity, action: ActivityAction, entityId: string, label?: string) => {
-    setActivity((prev) => {
-      const entry: ActivityLog = {
-        id: newActivityId(),
-        at: new Date().toISOString(),
-        entity,
-        action,
-        entityId,
-        label,
-      };
-      // Keep newest first; cap to ACTIVITY_LIMIT to bound localStorage growth.
-      return [entry, ...prev].slice(0, ACTIVITY_LIMIT);
+  // ---- Remote refetchers ----------------------------------------------------
+  const refetchAll = useCallback(async () => {
+    if (!remoteMode) return;
+    try {
+      const [c, r, t, act, com] = await Promise.all([
+        api.get<Committee[]>('/api/committees'),
+        api.get<RequestRecord[]>('/api/requests'),
+        api.get<TaskRecord[]>('/api/tasks'),
+        api.get<ActivityLog[]>('/api/activity?limit=200'),
+        api.get<Comment[]>('/api/comments'),
+      ]);
+      setCommittees(c);
+      setRequests(r);
+      setTasks(t);
+      setActivity(act);
+      setComments(com);
+    } catch {
+      // Likely 401 — stay on the cached state.
+    }
+  }, [remoteMode]);
+
+  const refetchEntity = useCallback(
+    async (entity: 'committee' | 'request' | 'task' | 'comment' | 'activity') => {
+      if (!remoteMode) return;
+      try {
+        if (entity === 'committee') setCommittees(await api.get<Committee[]>('/api/committees'));
+        else if (entity === 'request') setRequests(await api.get<RequestRecord[]>('/api/requests'));
+        else if (entity === 'task') setTasks(await api.get<TaskRecord[]>('/api/tasks'));
+        else if (entity === 'comment') setComments(await api.get<Comment[]>('/api/comments'));
+        else if (entity === 'activity') setActivity(await api.get<ActivityLog[]>('/api/activity?limit=200'));
+      } catch {
+        /* ignore */
+      }
+    },
+    [remoteMode]
+  );
+
+  // Initial load when remote mode flips on.
+  useEffect(() => {
+    if (remoteMode) refetchAll();
+  }, [remoteMode, refetchAll]);
+
+  // Realtime: refetch on broadcast.
+  const refetchRef = useRef(refetchEntity);
+  refetchRef.current = refetchEntity;
+  useEffect(() => {
+    if (!remoteMode) return;
+    const socket = getSocket();
+    return socket.onChange(({ entity }) => {
+      const e = entity as 'committee' | 'request' | 'task' | 'comment' | 'activity';
+      refetchRef.current(e);
+      refetchRef.current('activity');
     });
-  }, []);
+  }, [remoteMode]);
+
+  // ---- Local activity logging (only when offline) ---------------------------
+  const log = useCallback(
+    (entity: ActivityEntity, action: ActivityAction, entityId: string, label?: string) => {
+      if (remoteMode) return;
+      setActivity((prev) => {
+        const entry: ActivityLog = {
+          id: newActivityId(),
+          at: new Date().toISOString(),
+          entity,
+          action,
+          entityId,
+          label,
+        };
+        return [entry, ...prev].slice(0, ACTIVITY_LIMIT);
+      });
+    },
+    [remoteMode]
+  );
+
+  // ---- Mutations ------------------------------------------------------------
+  // Pattern: optimistic local update first, then async API call. On API error
+  // we revert the local change. Socket events keep us in sync afterwards.
 
   const addCommittee = useCallback(
     (c: Omit<Committee, 'id'> & { id?: string }) => {
-      setCommittees((prev) => {
-        const id = c.id ?? nextId('CMT', prev);
-        const now = new Date().toISOString();
-        const next: Committee = { ...(c as Committee), id, createdAt: now, updatedAt: now };
-        log('committee', 'create', id, next.name);
-        return [next, ...prev];
-      });
+      const id = c.id ?? nextId('CMT', committees);
+      const now = new Date().toISOString();
+      const next: Committee = { ...(c as Committee), id, createdAt: now, updatedAt: now };
+      setCommittees((prev) => [next, ...prev]);
+      log('committee', 'create', id, next.name);
+      if (remoteMode) {
+        api.post<Committee>('/api/committees', next).catch(() => {
+          setCommittees((prev) => prev.filter((x) => x.id !== id));
+        });
+      }
     },
-    [log]
+    [committees, remoteMode, log]
   );
+
   const updateCommittee = useCallback(
     (id: string, patch: Partial<Committee>) => {
+      let prevSnapshot: Committee | undefined;
       setCommittees((prev) =>
         prev.map((it) => {
           if (it.id !== id) return it;
-          const merged = { ...it, ...patch, updatedAt: new Date().toISOString() };
-          log('committee', 'update', id, merged.name);
-          return merged;
+          prevSnapshot = it;
+          return { ...it, ...patch, updatedAt: new Date().toISOString() };
         })
       );
+      log('committee', 'update', id, patch.name);
+      if (remoteMode) {
+        api.patch<Committee>(`/api/committees/${id}`, patch).catch(() => {
+          if (prevSnapshot) {
+            const snap = prevSnapshot;
+            setCommittees((prev) => prev.map((x) => (x.id === id ? snap : x)));
+          }
+        });
+      }
     },
-    [log]
+    [remoteMode, log]
   );
+
   const removeCommittee = useCallback(
     (id: string) => {
+      let snap: Committee | undefined;
       setCommittees((prev) => {
-        const found = prev.find((it) => it.id === id);
-        if (found) log('committee', 'delete', id, found.name);
-        return prev.filter((it) => it.id !== id);
+        snap = prev.find((x) => x.id === id);
+        return prev.filter((x) => x.id !== id);
       });
+      if (snap) log('committee', 'delete', id, snap.name);
+      if (remoteMode) {
+        api.del(`/api/committees/${id}`).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setCommittees((prev) => [restore, ...prev]);
+          }
+        });
+      }
     },
-    [log]
+    [remoteMode, log]
   );
 
   const addRequest = useCallback(
     (r: Omit<RequestRecord, 'id'> & { id?: string }) => {
-      setRequests((prev) => {
-        const year = new Date().getFullYear();
-        const fallbackId = r.id ?? `REQ-${year}-${String(prev.length + 1).padStart(3, '0')}`;
-        const now = new Date().toISOString();
-        const next: RequestRecord = { ...(r as RequestRecord), id: fallbackId, createdAt: now, updatedAt: now };
-        log('request', 'create', fallbackId, next.name);
-        return [next, ...prev];
-      });
+      const year = new Date().getFullYear();
+      const id = r.id ?? `REQ-${year}-${String(requests.length + 1).padStart(3, '0')}`;
+      const now = new Date().toISOString();
+      const next: RequestRecord = { ...(r as RequestRecord), id, createdAt: now, updatedAt: now };
+      setRequests((prev) => [next, ...prev]);
+      log('request', 'create', id, next.name);
+      if (remoteMode) {
+        api.post<RequestRecord>('/api/requests', next).catch(() => {
+          setRequests((prev) => prev.filter((x) => x.id !== id));
+        });
+      }
     },
-    [log]
+    [requests.length, remoteMode, log]
   );
+
   const updateRequest = useCallback(
     (id: string, patch: Partial<RequestRecord>) => {
+      let snap: RequestRecord | undefined;
       setRequests((prev) =>
         prev.map((it) => {
           if (it.id !== id) return it;
-          const merged = { ...it, ...patch, updatedAt: new Date().toISOString() };
-          log('request', 'update', id, merged.name);
-          return merged;
+          snap = it;
+          return { ...it, ...patch, updatedAt: new Date().toISOString() };
         })
       );
+      log('request', 'update', id, patch.name);
+      if (remoteMode) {
+        api.patch(`/api/requests/${id}`, patch).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setRequests((prev) => prev.map((x) => (x.id === id ? restore : x)));
+          }
+        });
+      }
     },
-    [log]
+    [remoteMode, log]
   );
+
   const removeRequest = useCallback(
     (id: string) => {
+      let snap: RequestRecord | undefined;
       setRequests((prev) => {
-        const found = prev.find((it) => it.id === id);
-        if (found) log('request', 'delete', id, found.name);
-        return prev.filter((it) => it.id !== id);
+        snap = prev.find((x) => x.id === id);
+        return prev.filter((x) => x.id !== id);
       });
+      if (snap) log('request', 'delete', id, snap.name);
+      if (remoteMode) {
+        api.del(`/api/requests/${id}`).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setRequests((prev) => [restore, ...prev]);
+          }
+        });
+      }
     },
-    [log]
+    [remoteMode, log]
   );
 
   const addTask = useCallback(
     (t: Omit<TaskRecord, 'id'> & { id?: string }) => {
-      setTasks((prev) => {
-        const prefix = t.kind === 'routine' ? 'TSK-R' : 'TSK-T';
-        const id = t.id ?? nextId(prefix, prev);
-        const now = new Date().toISOString();
-        const next: TaskRecord = { ...(t as TaskRecord), id, createdAt: now, updatedAt: now };
-        log('task', 'create', id, next.title);
-        return [next, ...prev];
-      });
+      const prefix = t.kind === 'routine' ? 'TSK-R' : 'TSK-T';
+      const id = t.id ?? nextId(prefix, tasks);
+      const now = new Date().toISOString();
+      const next: TaskRecord = { ...(t as TaskRecord), id, createdAt: now, updatedAt: now };
+      setTasks((prev) => [next, ...prev]);
+      log('task', 'create', id, next.title);
+      if (remoteMode) {
+        api.post<TaskRecord>('/api/tasks', next).catch(() => {
+          setTasks((prev) => prev.filter((x) => x.id !== id));
+        });
+      }
     },
-    [log]
+    [tasks, remoteMode, log]
   );
+
   const updateTask = useCallback(
     (id: string, patch: Partial<TaskRecord>) => {
+      let snap: TaskRecord | undefined;
       setTasks((prev) =>
         prev.map((it) => {
           if (it.id !== id) return it;
-          const merged = { ...it, ...patch, updatedAt: new Date().toISOString() };
-          log('task', 'update', id, merged.title);
-          return merged;
+          snap = it;
+          return { ...it, ...patch, updatedAt: new Date().toISOString() };
         })
       );
+      log('task', 'update', id, patch.title);
+      if (remoteMode) {
+        api.patch(`/api/tasks/${id}`, patch).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setTasks((prev) => prev.map((x) => (x.id === id ? restore : x)));
+          }
+        });
+      }
     },
-    [log]
-  );
-  const removeTask = useCallback(
-    (id: string) => {
-      setTasks((prev) => {
-        const found = prev.find((it) => it.id === id);
-        if (found) log('task', 'delete', id, found.title);
-        return prev.filter((it) => it.id !== id);
-      });
-    },
-    [log]
+    [remoteMode, log]
   );
 
-  const addComment = useCallback((c: Omit<Comment, 'id' | 'at'>) => {
-    setComments((prev) => [
-      { ...c, id: `CMT-MSG-${Date.now()}-${Math.floor(Math.random() * 1000)}`, at: new Date().toISOString() },
-      ...prev,
-    ]);
-  }, []);
-  const removeComment = useCallback((id: string) => {
-    setComments((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+  const removeTask = useCallback(
+    (id: string) => {
+      let snap: TaskRecord | undefined;
+      setTasks((prev) => {
+        snap = prev.find((x) => x.id === id);
+        return prev.filter((x) => x.id !== id);
+      });
+      if (snap) log('task', 'delete', id, snap.title);
+      if (remoteMode) {
+        api.del(`/api/tasks/${id}`).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setTasks((prev) => [restore, ...prev]);
+          }
+        });
+      }
+    },
+    [remoteMode, log]
+  );
+
+  const addComment = useCallback(
+    (c: Omit<Comment, 'id' | 'at'>) => {
+      const tempId = `CMT-MSG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const next: Comment = { ...c, id: tempId, at: new Date().toISOString() };
+      setComments((prev) => [next, ...prev]);
+      if (remoteMode) {
+        api
+          .post<Comment>('/api/comments', { entity: c.entity, entityId: c.entityId, text: c.text })
+          .then((created) => {
+            setComments((prev) => prev.map((m) => (m.id === tempId ? created : m)));
+          })
+          .catch(() => {
+            setComments((prev) => prev.filter((m) => m.id !== tempId));
+          });
+      }
+    },
+    [remoteMode]
+  );
+
+  const removeComment = useCallback(
+    (id: string) => {
+      let snap: Comment | undefined;
+      setComments((prev) => {
+        snap = prev.find((m) => m.id === id);
+        return prev.filter((m) => m.id !== id);
+      });
+      if (remoteMode) {
+        api.del(`/api/comments/${id}`).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setComments((prev) => [restore, ...prev]);
+          }
+        });
+      }
+    },
+    [remoteMode]
+  );
 
   const addDependency = useCallback(
     (taskId: string, dependsOnId: string) => {
       if (taskId === dependsOnId) return { ok: false, reason: 'self' as const };
-      // Cycle check via DFS over the existing dependency graph.
       const adjacency = new Map<string, string[]>();
       for (const d of dependencies) {
         if (!adjacency.has(d.taskId)) adjacency.set(d.taskId, []);
@@ -242,14 +426,39 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (exists) return { ok: false, reason: 'duplicate' as const };
       const id = `DEP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       setDependencies((prev) => [{ id, taskId, dependsOnId }, ...prev]);
+      if (remoteMode) {
+        api
+          .post<{ id: string }>(`/api/tasks/${taskId}/dependencies`, { dependsOnId })
+          .then((dep) => {
+            setDependencies((prev) => prev.map((d) => (d.id === id ? { id: dep.id, taskId, dependsOnId } : d)));
+          })
+          .catch(() => {
+            setDependencies((prev) => prev.filter((d) => d.id !== id));
+          });
+      }
       return { ok: true as const };
     },
-    [dependencies]
+    [dependencies, remoteMode]
   );
 
-  const removeDependency = useCallback((id: string) => {
-    setDependencies((prev) => prev.filter((d) => d.id !== id));
-  }, []);
+  const removeDependency = useCallback(
+    (id: string) => {
+      let snap: TaskDependency | undefined;
+      setDependencies((prev) => {
+        snap = prev.find((d) => d.id === id);
+        return prev.filter((d) => d.id !== id);
+      });
+      if (remoteMode && snap) {
+        api.del(`/api/tasks/${snap.taskId}/dependencies/${id}`).catch(() => {
+          if (snap) {
+            const restore = snap;
+            setDependencies((prev) => [restore, ...prev]);
+          }
+        });
+      }
+    },
+    [remoteMode]
+  );
 
   const resetAll = useCallback(() => {
     setCommittees(seedCommittees);
@@ -281,6 +490,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeComment,
       addDependency,
       removeDependency,
+      remoteMode,
       resetAll,
     }),
     [
@@ -303,6 +513,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeComment,
       addDependency,
       removeDependency,
+      remoteMode,
       resetAll,
     ]
   );

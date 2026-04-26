@@ -10,6 +10,7 @@ import {
   UsersRound,
   CalendarDays,
   Kanban,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight,
   X,
@@ -18,12 +19,25 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useUI } from '../contexts/UIContext';
+import { useAuth } from '../contexts/AuthContext';
 
 type Item = {
   to: string;
-  labelKey: 'nav.dashboard' | 'nav.committees' | 'nav.requests' | 'nav.tasks' | 'nav.tasks.routine' | 'nav.tasks.teams' | 'nav.tasks.board' | 'nav.calendar' | 'nav.reports' | 'nav.settings';
+  labelKey:
+    | 'nav.dashboard'
+    | 'nav.committees'
+    | 'nav.requests'
+    | 'nav.tasks'
+    | 'nav.tasks.routine'
+    | 'nav.tasks.teams'
+    | 'nav.tasks.board'
+    | 'nav.calendar'
+    | 'nav.reports'
+    | 'nav.admin'
+    | 'nav.settings';
   icon: LucideIcon;
   end?: boolean;
+  adminOnly?: boolean;
 };
 
 const items: Item[] = [
@@ -36,14 +50,18 @@ const items: Item[] = [
   { to: '/app/tasks/teams', labelKey: 'nav.tasks.teams', icon: UsersRound },
   { to: '/app/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
   { to: '/app/reports', labelKey: 'nav.reports', icon: BarChart3 },
+  { to: '/app/admin', labelKey: 'nav.admin', icon: ShieldCheck, adminOnly: true },
   { to: '/app/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 function NavList({ collapsed, onItemClick }: { collapsed?: boolean; onItemClick?: () => void }) {
   const { t } = useLanguage();
+  const { apiAvailable, hasRole } = useAuth();
+  // Admin-only entries are only visible when API mode is on AND the user is an admin.
+  const visible = items.filter((i) => !i.adminOnly || (apiAvailable && hasRole('admin')));
   return (
     <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
-      {items.map(({ to, labelKey, icon: Icon, end }) => (
+      {visible.map(({ to, labelKey, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}

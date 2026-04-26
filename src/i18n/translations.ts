@@ -283,6 +283,11 @@ export const translations = {
     'deps.self': 'لا يمكن أن تعتمد المهمة على نفسها',
     'deps.pickTask': 'اختر مهمة',
 
+    // Admin
+    'nav.admin': 'إدارة المستخدمين',
+    'admin.title': 'إدارة المستخدمين والأدوار',
+    'admin.subtitle': 'تعديل صلاحيات المستخدمين في المنصة (متاح للمدير فقط)',
+
     // Auth
     'auth.login': 'تسجيل الدخول',
     'auth.logout': 'تسجيل الخروج',
@@ -640,6 +645,11 @@ export const translations = {
     'deps.duplicate': 'This prerequisite is already added',
     'deps.self': 'A task cannot depend on itself',
     'deps.pickTask': 'Pick a task',
+
+    // Admin
+    'nav.admin': 'User management',
+    'admin.title': 'Users & roles',
+    'admin.subtitle': 'Change user permissions (admin only)',
 
     // Auth
     'auth.login': 'Sign in',
