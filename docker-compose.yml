@@ -1,0 +1,47 @@
+# Full Abu-Rabee stack: Express+SQLite API + Vite SPA, fronted by Nginx.
+#
+# Usage:
+#   docker compose up --build
+#   open http://localhost:8080   # frontend
+#   open http://localhost:4000/api/docs   # API docs
+#
+# Persistence: the SQLite DB lives in the named volume `abu-rabee-data`,
+# which survives `docker compose down` (use `down -v` to nuke it).
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: abu-rabee/server:latest
+    container_name: abu-rabee-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: file:/app/prisma/dev.db
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-in-production}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8080}
+      NODEMAIL_TRANSPORT: ${NODEMAIL_TRANSPORT:-json}
+    ports:
+      - "4000:4000"
+    volumes:
+      - abu-rabee-data:/app/prisma
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_BASE: /
+    image: abu-rabee/client:latest
+    container_name: abu-rabee-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  abu-rabee-data:

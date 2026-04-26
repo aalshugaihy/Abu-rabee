@@ -1,0 +1,173 @@
+// Abu-Rabee — server-side data model.
+//
+// Generates a Prisma client for the SQLite database at DATABASE_URL.
+// All entities except User mirror the frontend domain types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Roles: 'admin' | 'staff' | 'viewer'  (validated at the app layer; SQLite
+// does not support native enums in Prisma).
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("staff")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  comments      Comment[]
+  activity      ActivityLog[]
+  refreshTokens RefreshToken[]
+  savedViews    SavedView[]
+}
+
+// Long-lived rotating refresh tokens. The hash (not the secret itself) is
+// stored so a leaked DB row does not let an attacker re-use the token.
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  rememberMe Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Per-user saved filter presets for a list page (committees / requests / tasks).
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  page      String
+  name      String
+  filters   String   // JSON-encoded
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, page])
+}
+
+model Committee {
+  id              String   @id
+  name            String
+  nameEn          String?
+  type            String?
+  scope           String
+  department      String?
+  sector          String?
+  representative  String?
+  head            String?
+  organizer       String?
+  members         Int?
+  startDate       String?
+  endDate         String?
+  status          String
+  active          Boolean  @default(true)
+  confidentiality String?
+  budget          Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tasks Task[]
+}
+
+model RequestRecord {
+  id             String   @id
+  name           String
+  type           String?
+  requester      String?
+  classification String?
+  priority       String?
+  sector         String?
+  department     String?
+  purpose        String?
+  direction      String?
+  txnNumber      String?
+  txnName        String?
+  status         String
+  owner          String?
+  date           String?
+  dueDate        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Task {
+  id           String   @id
+  title        String
+  description  String?
+  kind         String   // routine | team
+  team         String?
+  committeeId  String?
+  department   String?
+  assignee     String?
+  priority     String
+  status       String
+  frequency    String?
+  dueDate      String?
+  lastRun      String?
+  nextRun      String?
+  progress     Int      @default(0)
+  parentTaskId String?
+  orderIndex   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  committee Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  parent    Task?      @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  children  Task[]     @relation("TaskSubtasks")
+
+  blockedBy TaskDependency[] @relation("DependentTask")
+  blocks    TaskDependency[] @relation("DependsOnTask")
+}
+
+model TaskDependency {
+  id          String @id @default(cuid())
+  taskId      String
+  dependsOnId String
+  createdAt   DateTime @default(now())
+
+  task      Task @relation("DependentTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn Task @relation("DependsOnTask", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  entity    String   // committee | request | task
+  entityId  String
+  authorId  String?
+  authorName String
+  text      String
+  at        DateTime @default(now())
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  entity    String
+  action    String
+  entityId  String
+  label     String?
+  userId    String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

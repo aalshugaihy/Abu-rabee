@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check (client)
+        run: npm run typecheck
+
+      - name: Test (client)
+        run: npm test
+
+      - name: Build (client)
+        run: npm run build
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client (server)
+        working-directory: server
+        env:
+          DATABASE_URL: file:./prisma/dev.db
+        run: npx prisma generate
+
+      - name: Type check (server)
+        working-directory: server
+        run: npm run typecheck
+
+      - name: Test (server)
+        working-directory: server
+        run: npm test
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>متابعة أعمال ومهام قطاع المساحة والاعمال الجيومكانية</title>
+    <script>
+      // SPA fallback for static hosts (e.g. GitHub Pages).
+      // Preserve the requested path/query/hash and reload the index so the
+      // client-side router can resolve the route.
+      (function () {
+        var path = window.location.pathname + window.location.search + window.location.hash;
+        sessionStorage.setItem('spa-redirect', path);
+        var base = '/';
+        var parts = window.location.pathname.split('/');
+        if (parts.length > 1 && parts[1]) {
+          base = '/' + parts[1] + '/';
+        }
+        window.location.replace(base);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
