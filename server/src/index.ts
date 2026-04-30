@@ -2,6 +2,9 @@ import http from 'node:http';
 import { Server as IOServer } from 'socket.io';
 import { createApp } from './app.js';
 import { setIo } from './sockets.js';
+import { assertProductionConfig } from './config.js';
+
+assertProductionConfig();
 
 const PORT = Number(process.env.PORT) || 4000;
 const ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';

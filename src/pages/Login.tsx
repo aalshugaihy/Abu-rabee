@@ -19,11 +19,16 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [waking, setWaking] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    // Render's free tier sleeps after 15 min idle. Surface a "waking up"
+    // hint if the request hasn't returned in 4s so users don't think the
+    // form is broken on the first cold-start hit.
+    const wakeTimer = window.setTimeout(() => setWaking(true), 4000);
     try {
       if (mode === 'login') {
         await login(email, password, rememberMe);
@@ -36,6 +41,8 @@ export default function LoginPage() {
       // eslint-disable-next-line no-console
       console.error(err);
     } finally {
+      clearTimeout(wakeTimer);
+      setWaking(false);
       setLoading(false);
     }
   }
@@ -109,6 +116,11 @@ export default function LoginPage() {
               {t('auth.rememberMe')}
             </label>
             {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+            {waking && (
+              <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+                {t('auth.waking')}
+              </p>
+            )}
             <button type="submit" className="btn-primary w-full justify-center" disabled={loading || !apiAvailable}>
               <LogIn size={14} /> {mode === 'login' ? t('auth.signIn') : t('action.save')}
               <Arrow size={14} />

@@ -174,6 +174,24 @@ https://abu-rabee-client.onrender.com
 - [ ] صفحة Activity → ترى أحداث الـ login المسجّلة
 - [ ] حساب `viewer` → لا يستطيع إضافة/تعديل/حذف (الأزرار مخفية أو 403)
 
+### ✅ تحقق آلي بأمر واحد
+
+شغّل هذا من جهازك بعد انتهاء النشر — سيمر على ~13 فحصاً (health, ready, swagger, login, refresh, CORS preflight, frontend index, SPA fallback) ويبلّغك بأي شيء معطّل:
+
+```bash
+./scripts/check-deploy.sh \
+  https://abu-rabee-api.onrender.com \
+  https://abu-rabee-client.onrender.com
+```
+
+النتيجة المتوقعة:
+```
+✅  All 13 checks passed.
+```
+
+إذا فشل CORS فالسكريبت يقترح الإصلاح بنفسه (تحديث `CLIENT_ORIGIN` على
+الـ API ليطابق رابط الواجهة).
+
 ---
 
 ## 🔥 حلّ المشاكل (Troubleshooting)
