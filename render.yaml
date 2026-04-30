@@ -38,10 +38,13 @@ services:
       npx prisma generate
       npm run build
     startCommand: |
-      # Apply the schema (idempotent) then start the API. We swallow non-zero
-      # from `db push` so the API still boots if the schema is already in sync
-      # — the readiness probe will catch any genuine DB problems.
+      # 1. Apply the schema (idempotent). Tolerated if already in sync.
       npx prisma db push --skip-generate --accept-data-loss || echo "schema already in sync"
+      # 2. Bootstrap demo accounts the first time the DB is empty.
+      #    `seed.ts` uses upsert so re-runs are safe; failure here doesn't
+      #    block the API from starting.
+      node dist/seed.js || echo "seed skipped"
+      # 3. Start the API.
       node --enable-source-maps dist/index.js
     healthCheckPath: /health
     envVars:

@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push --skip-generate --accept-data-loss",
     "seed": "tsx src/seed.ts",
+    "seed:prod": "node dist/seed.js",
     "prepare:production": "cp prisma/schema.production.prisma prisma/schema.prisma",
     "build:production": "npm run prepare:production && npx prisma generate && npm run build",
     "deploy:migrate": "npx prisma db push --skip-generate --accept-data-loss",
